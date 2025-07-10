@@ -18,6 +18,8 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            display: flex; /* Für Footer am unteren Rand */
+            flex-direction: column; /* Für Footer am unteren Rand */
         }
 
         .container {
@@ -28,6 +30,7 @@
             padding: 30px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
+            flex-grow: 1; /* Für Footer am unteren Rand */
         }
 
         h1 {
@@ -358,4 +361,1080 @@
 
         .feeds-toggle {
             font-size: 14px;
-            f
+            font-weight: 600;
+            color: #4a5568;
+            transition: transform 0.3s ease;
+        }
+
+        .feeds-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .feeds-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .feeds-content.collapsed {
+            max-height: 0;
+        }
+
+        /* NEW CSS for feed list header and item layout */
+        .feed-list-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: #e2e8f0; /* Lighter background for header */
+            border-radius: 8px 8px 0 0; /* Rounded top corners */
+            margin-bottom: 5px; /* Space between header and first feed item */
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .feed-header-col {
+            padding: 0 5px; /* Consistent padding */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center; /* Vertically align text */
+        }
+
+        /* Column widths - adjust as needed for alignment */
+        .feed-header-col.header-checkbox,
+        .feed-item > input[type="checkbox"] {
+            flex-basis: 40px; 
+            flex-grow: 0;
+            margin-right: 0; /* Remove default checkbox margin */
+            justify-content: center; /* Center the checkbox/label */
+        }
+
+        .feed-header-col.header-podcast-name,
+        .feed-podcast-name {
+            flex-basis: 234px; /* Increased by 30% from 180px */
+            flex-shrink: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .feed-header-col.header-rss-url,
+        .feed-url {
+            flex-grow: 1; /* Take remaining space */
+            margin-right: 10px; /* Space before topic/remove button */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .feed-header-col.header-topic,
+        .feed-topic { /* Renamed from .editable in JS for clarity in this context */
+            flex-basis: 150px; 
+            flex-shrink: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 4px 8px; /* Maintain padding for editable area */
+        }
+        
+        .feed-header-col.header-remove {
+            flex-basis: 80px; 
+            flex-grow: 0; /* Fixed width for button */
+            text-align: center;
+            display: flex; /* Use flex to center content if needed */
+            justify-content: center; /* Center the remove button/label */
+        }
+
+        .feed-item {
+            display: flex;
+            align-items: center;
+            padding: 3px 16px; /* Reduced vertical padding further */
+            background: #f8fafc;
+            border-radius: 6px;
+            margin-bottom: 3px; /* Reduced vertical space */
+        }
+
+        .feed-item:last-child {
+            margin-bottom: 0; /* No margin after the last item */
+        }
+
+        .remove-feed {
+            padding: 3px 6px; /* Reduced padding for smaller button */
+            font-size: 13px; /* Slightly smaller font for button */
+            flex-basis: 80px; 
+            flex-grow: 0;
+        }
+
+        .podcast-name {
+            font-weight: 600;
+            color: #667eea;
+            max-width: 292.5px; /* Increased by 30% from 180px */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .episode-title {
+            color: #2d3748;
+            font-weight: 500;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .host {
+            color: #4a5568;
+            font-size: 14px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+            height: auto;
+            min-height: 1.4em;
+        }
+
+        .highlight {
+            background: #fef5e7;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #cbd5e0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .input-group {
+                min-width: auto;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .filter-group {
+                justify-content: space-between;
+            }
+            
+            th, td {
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+            .episode-title {
+                max-width: 200px;
+            }
+
+            /* Adjustments for mobile view of feed list */
+            .feed-list-header, .feed-item {
+                flex-wrap: wrap; /* Allow wrapping */
+                padding: 6px 10px; /* Smaller padding */
+            }
+
+            .feed-header-col, .feed-item > * {
+                flex-basis: auto !important; /* Reset flex-basis for mobile */
+                width: 100%; /* Take full width */
+                margin-bottom: 2px; /* Small vertical spacing */
+            }
+
+            .feed-header-col.header-checkbox,
+            .feed-item > input[type="checkbox"] {
+                width: auto; /* Checkbox doesn't need full width */
+                margin-bottom: 0;
+            }
+
+            .feed-header-col.header-remove,
+            .remove-feed {
+                width: auto; /* Button doesn't need full width */
+                margin-left: auto; /* Push to the right */
+                margin-bottom: 0;
+            }
+            .feed-url, .feed-podcast-name, .feed-topic {
+                white-space: normal; /* Allow text to wrap on multiple lines */
+                word-break: break-word; /* Break long words */
+                max-width: none; /* Remove max-width constraints */
+            }
+        }
+
+        /* NEW CSS for Footer */
+        footer {
+            margin-top: 40px;
+            padding: 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* Custom Modal CSS */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-content h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .modal-content p {
+            color: #4a5568;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-buttons .btn-confirm {
+            background: linear-gradient(45deg, #e53e3e, #c53030);
+            color: white;
+            border: none;
+        }
+
+        .modal-buttons .btn-confirm:hover {
+            box-shadow: 0 5px 15px rgba(229, 62, 62, 0.3);
+        }
+
+        .modal-buttons .btn-cancel {
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+        }
+
+        .modal-buttons .btn-cancel:hover {
+            background: #cbd5e0;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎧 Podcast Episode Tracker</h1>
+        
+        <div class="controls">
+            <div class="input-group">
+                <input type="url" id="rssUrl" placeholder="RSS Feed URL eingeben (z.B. https://example.com/feed.xml)">
+                <button onclick="addFeed()">Feed hinzufügen</button>
+            </div>
+            <button onclick="refreshAll()">Alle aktualisieren</button>
+            <input type="file" id="importFeedsXLSXFile" accept=".xlsx" style="display: none;" onchange="importFeedsFromXLSX(event)">
+            <button onclick="document.getElementById('importFeedsXLSXFile').click()">Feeds importieren (XLSX)</button>
+        </div>
+
+        <div class="filter-container">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="timeFilter">Zeitraum:</label>
+                    <select id="timeFilter" onchange="applyFilters()">
+                        <option value="all">Alle</option>
+                        <option value="week">Letzte Woche</option>
+                        <option value="month" selected>Letzter Monat</option>
+                        <option value="quarter">Letztes Quartal</option>
+                        <option value="year">Letztes Jahr</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="countFilter">Anzahl:</label>
+                    <select id="countFilter" onchange="applyFilters()">
+                        <option value="all">Alle</option>
+                        <option value="10" selected>Letzte 10</option>
+                        <option value="20">Letzte 20</option>
+                        <option value="30">Letzte 30</option>
+                        <option value="50">Letzte 50</option>
+                        <option value="100">Letzte 100</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Suche nach Stichworten in allen Spalten..." oninput="applyFilters()">
+                <button onclick="clearSearch()">✕</button>
+            </div>
+            <div class="search-stats" id="searchStats"></div>
+        </div>
+
+        <div class="podcast-feeds" id="podcastFeeds">
+            <div class="feeds-header" onclick="toggleFeedsList()" style="display: none;">
+                <span class="feeds-toggle" id="feedsToggle">▼</span>
+                <span>Podcast-Feeds (<span id="feedCount">0</span>)</span>
+            </div>
+            <div class="feeds-content" id="feedsContent"></div>
+        </div>
+
+        <button onclick="exportToXLSX()" style="margin-bottom: 20px;">Ergebnisse als XLSX exportieren</button>
+
+        <div class="status" id="status"></div>
+
+        <div class="table-container">
+            <table id="episodeTable">
+                <thead>
+                    <tr>
+                        <th>Podcast</th>
+                        <th>Episode</th>
+                        <th>Datum</th>
+                        <th>Host</th>
+                        <th>Favorit</th>
+                    </tr>
+                </thead>
+                <tbody id="episodeTableBody">
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                            </svg>
+                            <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
+                            <p>Fügen Sie RSS-Feed-URLs hinzu, um Podcast-Episoden zu verfolgen</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEUER FOOTER BEREICH -->
+    <footer>
+        <p>&copy; 2025 Podcast Tracker. Alle Rechte vorbehalten.</p>
+        <div>
+            <a href="/impressum" target="_blank">Impressum</a>
+            <a href="/datenschutz" target="_blank">Datenschutz</a>
+        </div>
+    </footer>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modalTitle">Bestätigung erforderlich</h3>
+            <p id="modalMessage"></p>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hideConfirmationModal(false)">Abbrechen</button>
+                <button class="btn-confirm" onclick="hideConfirmationModal(true)">Bestätigen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allFeeds = [];
+        let allEpisodes = [];
+        let filteredEpisodes = [];
+        let currentSearchTerm = '';
+        let feedsCollapsed = false;
+
+        // Promise-basiertes Callback für das benutzerdefinierte Modal
+        let confirmActionResolve = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlInput = document.getElementById('rssUrl');
+            urlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addFeed();
+                }
+            });
+            loadDataFromBackend();
+        });
+
+        // Funktion zum Anzeigen des benutzerdefinierten Bestätigungsmodals
+        function showConfirmationModal(message) {
+            const modal = document.getElementById('confirmationModal');
+            const modalMessage = document.getElementById('modalMessage');
+            modalMessage.textContent = message;
+            modal.classList.add('active');
+
+            return new Promise(resolve => {
+                confirmActionResolve = resolve;
+            });
+        }
+
+        // Funktion zum Ausblenden des Modals und Auflösen des Promises
+        function hideConfirmationModal(confirmed) {
+            const modal = document.getElementById('confirmationModal');
+            modal.classList.remove('active');
+            if (confirmActionResolve) {
+                confirmActionResolve(confirmed);
+                confirmActionResolve = null; // Reset
+            }
+        }
+
+        async function fetchData(url, method = 'GET', data = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                if (method === 'DELETE') {
+                    return {}; 
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Fehler beim Abrufen/Senden von Daten:', error);
+                showStatus(`Fehler: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        async function loadDataFromBackend() {
+            showStatus('Lade Daten...', 'loading');
+            const feedsResponse = await fetchData('/feeds');
+            const episodesResponse = await fetchData('/fepisodes'); // Changed to /fepisodes as per backend
+
+            if (feedsResponse && episodesResponse) {
+                allFeeds = feedsResponse;
+                allEpisodes = episodesResponse;
+                allEpisodes.sort((a, b) => new Date(b.pub_date) - new Date(a.pub_date));
+                
+                applyFilters();
+                updateFeedsList();
+                showStatus('Daten erfolgreich geladen', 'success');
+            } else {
+                showStatus('Fehler beim Laden der Daten vom Backend', 'error');
+            }
+        }
+
+        function getEpisodeId(episode) {
+            return episode.id; 
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        async function addFeed() {
+            const urlInput = document.getElementById('rssUrl');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showStatus('Bitte geben Sie eine RSS-Feed-URL ein', 'error');
+                return;
+            }
+
+            if (!isValidUrl(url)) {
+                showStatus('Bitte geben Sie eine gültige URL ein', 'error');
+                return;
+            }
+
+            const existingFeed = allFeeds.find(feed => feed.url === url);
+            if (existingFeed) {
+                showStatus('Dieser Feed wurde bereits hinzugefügt', 'error');
+                return;
+            }
+
+            showStatus('Füge Feed hinzu...', 'loading');
+            const newFeedData = { url: url, name: null, topic: null, is_active: true }; 
+            const response = await fetchData('/feeds', 'POST', newFeedData);
+
+            if (response && response.id) {
+                urlInput.value = '';
+                showStatus(`Feed hinzugefügt: ${response.url}`, 'success');
+                await refreshFeedEpisodes(response.id);
+                await loadDataFromBackend();
+            } else if (response && response.message === "Feed bereits vorhanden") {
+                showStatus('Dieser Feed wurde bereits hinzugefügt', 'error');
+            }
+        }
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        async function removeFeed(feedId) {
+            const feedToRemove = allFeeds.find(f => f.id === feedId);
+            if (!feedToRemove) return;
+
+            const episodeCount = allEpisodes.filter(episode => episode.feed_id === feedId).length;
+            let confirmationMessage = `Möchten Sie diesen Feed wirklich entfernen?`;
+            if (episodeCount > 0) {
+                confirmationMessage += `\n\nDies wird ${episodeCount} Episode(n) und alle zugehörigen Daten löschen.`;
+            }
+            
+            const userConfirmed = await showConfirmationModal(confirmationMessage);
+            if (!userConfirmed) {
+                return;
+            }
+            
+            showStatus('Entferne Feed...', 'loading');
+            const response = await fetchData(`/feeds/${feedId}`, 'DELETE');
+
+            if (response !== null) {
+                showStatus(`Feed entfernt`, 'success');
+                await loadDataFromBackend();
+            }
+        }
+
+        function updateFeedsList() {
+            const feedsHeader = document.querySelector('.feeds-header');
+            const feedsContent = document.getElementById('feedsContent');
+            const feedCount = document.getElementById('feedCount');
+            
+            if (allFeeds.length === 0) {
+                feedsHeader.style.display = 'none';
+                feedsContent.innerHTML = '';
+                return;
+            }
+
+            feedsHeader.style.display = 'flex';
+            feedCount.textContent = allFeeds.length;
+
+            let feedsHtml = `
+                <div class="feed-list-header">
+                    <div class="feed-header-col header-checkbox">Aktiv</div>
+                    <div class="feed-header-col header-podcast-name">Podcast-Name</div>
+                    <div class="feed-header-col header-rss-url">RSS-Adresse</div>
+                    <div class="feed-header-col header-topic">Thema</div>
+                    <div class="feed-header-col header-remove"></div>
+                </div>
+            `;
+
+            feedsHtml += allFeeds.map(feed => {
+                const isChecked = feed.is_active; 
+                const feedTopic = feed.topic || 'Klicken zum Bearbeiten';
+                const podcastName = feed.name || feed.url; 
+
+                return `
+                    <div class="feed-item">
+                        <input type="checkbox" class="feed-checkbox" 
+                               ${isChecked ? 'checked' : ''} 
+                               onclick="toggleFeedActiveStatus(${feed.id}, this)">
+                    <div class="feed-podcast-name" title="${podcastName}">${highlightText(podcastName, currentSearchTerm)}</div>
+                    <div class="feed-url" title="${feed.url}">${feed.url}</div>
+                    <span class="editable feed-topic" onclick="makeEditableFeedTopic(this, ${feed.id})">${highlightText(feedTopic, currentSearchTerm)}</span>
+                    <button class="remove-feed" onclick="removeFeed(${feed.id})">Entfernen</button>
+                </div>
+            `;
+        }).join('');
+
+        feedsContent.innerHTML = feedsHtml;
+
+        if (!feedsCollapsed) {
+            feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+        }
+    }
+
+    function toggleFeedsList() {
+        const feedsContent = document.getElementById('feedsContent');
+        const feedsToggle = document.getElementById('feedsToggle');
+        
+        feedsCollapsed = !feedsCollapsed;
+        
+        if (feedsCollapsed) {
+            feedsContent.style.maxHeight = '0';
+            feedsToggle.textContent = '▶';
+            feedsToggle.classList.add('collapsed');
+        } else {
+            feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+            feedsToggle.textContent = '▼';
+            feedsToggle.classList.remove('collapsed');
+        }
+    }
+
+    async function toggleFeedActiveStatus(feedId, checkboxElement) {
+        const feed = allFeeds.find(f => f.id === feedId);
+        if (!feed) return;
+
+        const newActiveStatus = checkboxElement.checked; 
+        
+        showStatus('Aktualisiere Aktiv-Status...', 'loading');
+        const response = await fetchData(`/feeds/${feedId}`, 'PUT', { is_active: newActiveStatus });
+
+        if (response) {
+            feed.is_active = newActiveStatus; 
+            showStatus(`Feed-Status aktualisiert: ${newActiveStatus ? 'Aktiv' : 'Inaktiv'}`, 'success');
+            applyFilters(); 
+        } else {
+            checkboxElement.checked = !newActiveStatus;
+        }
+    }
+
+    async function refreshFeedEpisodes(feedId) {
+        showStatus('Aktualisiere Episoden...', 'loading');
+        const response = await fetchData(`/feeds/${feedId}/refresh_episodes`, 'POST');
+        if (response) {
+            showStatus(response.message, 'success');
+        }
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'Unbekannt';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Unbekannt';
+            
+            return date.toLocaleDateString('de-DE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        } catch (error) {
+            return 'Unbekannt';
+        }
+    }
+
+    function highlightText(text, searchTerm) {
+        if (!searchTerm) return text;
+        
+        const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function searchEpisodes(searchTerm, episodes) {
+        if (!searchTerm) {
+            return [...episodes];
+        }
+
+        const term = searchTerm.toLowerCase();
+        return episodes.filter(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            const podcastName = feed ? (feed.name || feed.url) : 'Unbekannt'; 
+            const topic = feed ? feed.topic : '';
+
+            return podcastName.toLowerCase().includes(term) ||
+                   episode.title.toLowerCase().includes(term) ||
+                   episode.description.toLowerCase().includes(term) ||
+                   topic.toLowerCase().includes(term) ||
+                   (episode.host && episode.host.toLowerCase().includes(term)); 
+        });
+    }
+
+    function applyTimeFilter(episodes) {
+        const timeFilter = document.getElementById('timeFilter').value;
+        if (timeFilter === 'all') return episodes;
+
+        const now = new Date();
+        const filterDate = new Date();
+
+        switch (timeFilter) {
+            case 'week':
+                filterDate.setDate(now.getDate() - 7);
+                break;
+            case 'month':
+                filterDate.setMonth(now.getMonth() - 1);
+                break;
+            case 'quarter':
+                filterDate.setMonth(now.getMonth() - 3);
+                break;
+            case 'year':
+                filterDate.setFullYear(now.getFullYear() - 1);
+                break;
+        }
+
+        return episodes.filter(episode => {
+            const episodeDate = new Date(episode.pub_date); 
+            return episodeDate >= filterDate;
+        });
+    }
+
+    function applyCountFilter(episodes) {
+        const countFilter = document.getElementById('countFilter').value;
+        if (countFilter === 'all') return episodes;
+
+        const count = parseInt(countFilter);
+        return episodes.slice(0, count);
+    }
+
+    function applyFilters() {
+        const searchInput = document.getElementById('searchInput');
+        currentSearchTerm = searchInput.value.trim();
+        
+        let episodes = [...allEpisodes];
+        
+        episodes = episodes.filter(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            return feed && feed.is_active;
+        });
+
+        episodes = searchEpisodes(currentSearchTerm, episodes);
+        
+        episodes = [...episodes].sort((a, b) => {
+            const dateA = new Date(a.pub_date);
+            const dateB = new Date(b.pub_date);
+            return dateB - dateA;
+        });
+        
+        episodes = applyTimeFilter(episodes);
+        
+        episodes = applyCountFilter(episodes);
+        
+        filteredEpisodes = episodes;
+        updateTable();
+        updateSearchStats();
+    }
+
+    function updateSearchStats() {
+        const statsElement = document.getElementById('searchStats');
+        
+        if (currentSearchTerm) {
+            const totalEpisodes = allEpisodes.length;
+            const filteredCount = filteredEpisodes.length;
+            statsElement.textContent = `${filteredCount} von ${totalEpisodes} Episoden gefunden für "${currentSearchTerm}"`;
+            statsElement.classList.add('active');
+        } else {
+            statsElement.classList.remove('active');
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        currentSearchTerm = '';
+        applyFilters();
+    }
+
+    async function makeEditableFeedTopic(element, feedId) {
+        const feed = allFeeds.find(f => f.id === feedId);
+        if (!feed) return;
+
+        const currentValue = feed.topic || '';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentValue;
+        input.className = 'editable-input';
+        
+        element.innerHTML = '';
+        element.appendChild(input);
+        element.classList.add('editing');
+        
+        input.focus();
+        input.select();
+        
+        function saveEdit() {
+            const newValue = input.value.trim();
+            if (newValue !== currentValue) {
+                showStatus('Aktualisiere Thema...', 'loading');
+                fetchData(`/feeds/${feedId}`, 'PUT', { topic: newValue })
+                    .then(response => {
+                        if (response) {
+                            showStatus('Thema aktualisiert', 'success');
+                            loadDataFromBackend(); 
+                        }
+                    });
+            }
+            element.textContent = newValue || 'Klicken zum Bearbeiten'; 
+            element.classList.remove('editing');
+        }
+        
+        input.addEventListener('blur', saveEdit);
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                saveEdit();
+            }
+        });
+    }
+
+    async function toggleFavorite(episodeId, starElement) {
+        const episode = allEpisodes.find(ep => ep.id === episodeId);
+        if (!episode) return;
+
+        const newFavoriteStatus = !episode.is_favorite;
+        
+        showStatus('Aktualisiere Favoritenstatus...', 'loading');
+        const response = await fetchData(`/episodes/${episodeId}`, 'PUT', { is_favorite: newFavoriteStatus });
+
+        if (response) {
+            episode.is_favorite = newFavoriteStatus;
+            
+            if (newFavoriteStatus) {
+                starElement.textContent = '⭐';
+                starElement.className = 'favorite-star active';
+            } else {
+                starElement.textContent = '☆';
+                starElement.className = 'favorite-star inactive';
+            }
+            showStatus('Favoritenstatus aktualisiert', 'success');
+        } else {
+            // Revert UI if API call failed
+            starElement.textContent = episode.is_favorite ? '⭐' : '☆';
+            starElement.className = `favorite-star ${episode.is_favorite ? 'active' : 'inactive'}`;
+        }
+    }
+
+    function updateTable() {
+        const tbody = document.getElementById('episodeTableBody');
+        
+        if (filteredEpisodes.length === 0) {
+            if (currentSearchTerm) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-results">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <h3>Keine Ergebnisse gefunden</h3>
+                            <p>Keine Episoden entsprechen den Suchkriterien "${currentSearchTerm}"</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                        </svg>
+                            <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
+                            <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
+                        </td>
+                    </tr>
+                `;
+            }
+            return;
+        }
+
+        tbody.innerHTML = filteredEpisodes.map(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            const podcastName = feed ? (feed.name || feed.url) : 'Unbekannt'; 
+            const host = episode.host || 'N/A'; 
+            
+            return `
+                <tr>
+                    <td class="podcast-name" title="${podcastName}">${highlightText(podcastName, currentSearchTerm)}</td>
+                    <td class="episode-title" title="${episode.title}">${highlightText(episode.title, currentSearchTerm)}</td>
+                    <td class="date">${formatDate(episode.pub_date)}</td>
+                    <td class="host" title="${host}">${highlightText(host, currentSearchTerm)}</td>
+                    <td>
+                        <span class="favorite-star ${episode.is_favorite ? 'active' : 'inactive'}" 
+                              onclick="toggleFavorite(${episode.id}, this)">
+                            ${episode.is_favorite ? '⭐' : '☆'}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function refreshAll() {
+        showStatus('Aktualisiere alle aktiven Feeds...', 'loading');
+        
+        const activeFeeds = allFeeds.filter(feed => feed.is_active);
+        const feedsToRefresh = activeFeeds.map(feed => refreshFeedEpisodes(feed.id));
+        await Promise.all(feedsToRefresh); 
+        
+        await loadDataFromBackend(); 
+        showStatus(`Alle ${activeFeeds.length} aktiven Feeds aktualisiert`, 'success');
+    }
+
+    function exportToXLSX() {
+        if (filteredEpisodes.length === 0) {
+            showStatus('Keine Episoden zum Exportieren vorhanden', 'error');
+            return;
+        }
+
+        const episodesToExport = filteredEpisodes;
+        
+        const exportData = episodesToExport.map(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            const podcastName = feed ? (feed.name || feed.url) : 'Unbekannt';
+            const feedTopic = feed ? feed.topic : '';
+            const host = episode.host || 'N/A'; 
+
+            return {
+                'Podcast': podcastName,
+                'Episode': episode.title,
+                'Datum': formatDate(episode.pub_date),
+                'Host': host,
+                'Thema': feedTopic,
+                'Favorit': episode.is_favorite ? 'Ja' : 'Nein'
+            };
+        });
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        
+        const colWidths = [
+            { wch: 32 }, // Podcast
+            { wch: 50 }, // Episode
+            { wch: 12 }, // Datum
+            { wch: 20 }, // Host
+            { wch: 30 }, // Thema
+            { wch: 10 }  // Favorit
+        ];
+        ws['!cols'] = colWidths;
+        
+        XLSX.utils.book_append_sheet(wb, ws, 'Podcast Episodes');
+        
+        const fileName = `podcast_episodes_${new Date().toISOString().split('T')[0]}.xlsx`;
+        
+        XLSX.writeFile(wb, fileName);
+
+        showStatus(`${episodesToExport.length} Episoden als XLSX exportiert`, 'success');
+    }
+
+    async function importFeedsFromXLSX(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            showStatus('Keine Datei ausgewählt.', 'error');
+            return;
+        }
+
+        showStatus('Importiere Feeds aus XLSX...', 'loading');
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                const feedsToImport = [];
+                json.forEach(row => {
+                    // Sicherstellen, dass die Spaltennamen korrekt sind und die Daten sauber extrahiert werden
+                    const rssUrl = row['RSS-Adresse']; 
+                    const podcastName = row['Podcast-Name'] || null; 
+                    const podcastTopic = row['Thema'] || null; 
+                    // Konvertierung von 'aktiv' Spalte: Excel kann TRUE/FALSE oder 1/0 zurückgeben
+                    const isActive = (row['aktiv'] === true || row['aktiv'] === 'TRUE' || row['aktiv'] === 1); 
+
+                    if (rssUrl && isValidUrl(rssUrl)) {
+                        feedsToImport.push({
+                            url: rssUrl,
+                            name: podcastName,
+                            topic: podcastTopic,
+                            is_active: isActive 
+                        });
+                    } else {
+                        console.warn('Ungültige RSS-Adresse in XLSX übersprungen:', rssUrl);
+                    }
+                });
+
+                if (feedsToImport.length === 0) {
+                    showStatus('Keine gültigen Feeds in der XLSX-Datei gefunden.', 'error');
+                    return;
+                }
+
+                const response = await fetchData('/import_feeds_xlsx', 'POST', feedsToImport);
+
+                if (response && response.message) {
+                    showStatus(response.message, 'success');
+                    await loadDataFromBackend(); 
+                } else {
+                    showStatus(`Fehler beim Importieren der XLSX-Feeds: ${response.error || 'Unbekannter Fehler'}`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Fehler beim Importieren der XLSX-Feeds:', error);
+                showStatus(`Fehler beim Importieren der XLSX-Feeds: ${error.message}`, 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+</script>
+</body>
+</html>
