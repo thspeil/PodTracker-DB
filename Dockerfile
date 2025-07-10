@@ -14,9 +14,11 @@ COPY app.py .
 COPY podcast_tracker-DB.html .
 COPY Impressum.html .
 COPY Datenschutz.html .
+COPY static/ static/ # NEU: Kopiert den gesamten static-Ordner
 
 # Exponiere den Port, auf dem die Flask-App läuft
 EXPOSE 5000
 
 # Starte die Flask-Anwendung mit Gunicorn, wenn der Container startet
+# 'app:app' bedeutet, dass die Flask-App-Instanz 'app' aus der Datei 'app.py' verwendet wird
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]

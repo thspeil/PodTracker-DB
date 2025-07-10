@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podcast Episode Tracker</title>
+    <!-- Favicon hinzufügen -->
+    <link rel="icon" type="image/x-icon" href="/static/PTr-favicon.ico">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* Bestehendes CSS */
@@ -206,31 +208,31 @@
             display: block;
         }
 
-        .status {
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            font-weight: 500;
-            display: none;
-        }
+.status {
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-weight: 500;
+    display: none; /* Dies ist wichtig, da JS es auf 'block' setzt */
+}
 
-        .status.success {
-            background: #f0fff4;
-            color: #38a169;
-            border: 1px solid #9ae6b4;
-        }
+.status.success {
+    background: #f0fff4;
+    color: #38a169;
+    border: 1px solid #9ae6b4;
+}
 
-        .status.error {
-            background: #fff5f5;
-            color: #e53e3e;
-            border: 1px solid #feb2b2;
-        }
+.status.error {
+    background: #fff5f5;
+    color: #e53e3e;
+    border: 1px solid #feb2b2;
+}
 
-        .status.loading {
-            background: #ebf8ff;
-            color: #3182ce;
-            border: 1px solid #90cdf4;
-        }
+.status.loading {
+    background: #ebf8ff;
+    color: #3182ce;
+    border: 1px solid #90cdf4;
+}
 
         .table-container {
             overflow-x: auto;
@@ -879,7 +881,7 @@
         async function loadDataFromBackend() {
             showStatus('Lade Daten...', 'loading');
             const feedsResponse = await fetchData('/feeds');
-            const episodesResponse = await fetchData('/fepisodes'); // Changed to /fepisodes as per backend
+            const episodesResponse = await fetchData('/episodes'); // Korrigiert auf die ursprüngliche Backend-Route
 
             if (feedsResponse && episodesResponse) {
                 allFeeds = feedsResponse;
@@ -900,6 +902,11 @@
 
         function showStatus(message, type) {
             const status = document.getElementById('status');
+            // Stellen Sie sicher, dass das Element gefunden wird, sonst ist 'status' null
+            if (!status) {
+                console.error("Status-Element mit ID 'status' nicht gefunden!");
+                return;
+            }
             status.textContent = message;
             status.className = `status ${type}`;
             status.style.display = 'block';

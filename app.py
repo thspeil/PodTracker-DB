@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -10,8 +10,10 @@ import xml.etree.ElementTree as ET
 # Lade Umgebungsvariablen aus .env-Datei (für lokale Entwicklung, in Codespaces durch Secrets überschrieben)
 load_dotenv()
 
-# Setze den static_folder explizit auf den absoluten Pfad des aktuellen Verzeichnisses
-app = Flask(__name__, static_folder=os.path.abspath(os.path.dirname(__file__)))
+# Flask-Anwendung initialisieren
+# 'static_folder' verweist auf den Ordner für statische Dateien (CSS, JS, Bilder, Favicon)
+# 'template_folder' verweist auf den Ordner für HTML-Templates (hier das Hauptverzeichnis '.')
+app = Flask(__name__, static_folder='static', template_folder='.')
 
 # CORS für alle Routen aktivieren (für Entwicklung).
 # In einer Produktionsumgebung sollte dies auf spezifische Ursprünge beschränkt werden.
@@ -141,11 +143,28 @@ def parse_rss_feed(feed_url):
 
 # API-Endpunkte
 
-# Route zum Servieren der HTML-Datei (Frontend)
+# Route zum Servieren der Haupt-HTML-Datei (Frontend)
 @app.route('/')
 def serve_frontend():
-    # Stellt die podcast_tracker-DB.html bereit, indem der static_folder verwendet wird
-    return send_from_directory(app.static_folder, 'podcast_tracker-DB.html')
+    # Stellt die podcast_tracker-DB.html bereit, die im template_folder (root) liegt
+    return render_template('podcast_tracker-DB.html')
+
+# Route für Impressum
+@app.route('/impressum')
+def impressum():
+    # Stellt die Impressum.html bereit, die im template_folder (root) liegt
+    return render_template('Impressum.html')
+
+# Route für Datenschutz
+@app.route('/datenschutz')
+def datenschutz():
+    # Stellt die Datenschutz.html bereit, die im template_folder (root) liegt
+    return render_template('Datenschutz.html')
+
+# NEU: Route zum Servieren des Favicons
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(app.static_folder, 'favicon.ico')
 
 # Feeds abrufen und hinzufügen
 @app.route('/feeds', methods=['GET', 'POST'])
@@ -384,16 +403,6 @@ def delete_episode(episode_id):
     db.session.commit()
     return jsonify({"message": "Episode erfolgreich gelöscht"}), 204
 
-# Route zum Servieren der Impressum-HTML-Datei
-@app.route('/impressum')
-def serve_impressum():
-    # Stellt die Impressum.html bereit, indem der static_folder verwendet wird
-    return send_from_directory(app.static_folder, 'Impressum.html')
-
-# Route zum Servieren der Datenschutz-HTML-Datei
-@app.route('/datenschutz')
-def serve_datenschutz():
-    return send_from_directory(app.static_folder, 'Datenschutz.html')
 
 if __name__ == '__main__':
     with app.app_context():
