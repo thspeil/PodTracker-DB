@@ -9,12 +9,18 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiere die Flask-Anwendung und die HTML-Dateien
+# Kopiere die Python-Anwendung
 COPY app.py .
+
+# Kopiere die HTML-Template-Dateien in den Root des Arbeitsverzeichnisses
+# Da template_folder='.' ist, müssen diese hier liegen
 COPY podcast_tracker-DB.html .
 COPY Impressum.html .
 COPY Datenschutz.html .
-COPY static/ static/ # NEU: Kopiert den gesamten static-Ordner
+
+# Kopiere den gesamten static-Ordner in das Arbeitsverzeichnis
+# Wichtig: Der Zielpfad 'static/' muss mit einem Schrägstrich enden, um anzuzeigen, dass es ein Verzeichnis ist
+COPY static/ static/
 
 # Exponiere den Port, auf dem die Flask-App läuft
 EXPOSE 5000
