@@ -23,6 +23,23 @@ jobs:
       - name: Checkout code # Schritt zum Klonen des Repositorys auf den Runner
         uses: actions/checkout@v4
 
+      # NEUER DEBUGGING-SCHRITT (VERSCHOBEN): Zeigt den Inhalt des OIDC-Tokens an
+      # Dieser Schritt muss VOR der Authentifizierung bei Google Cloud liegen
+      - name: Debug OIDC Token Subject
+        run: |
+          # Fordert ein OIDC-Token an und extrahiert den 'sub'-Claim
+          # Das Audience-Feld muss hier mit der Audience übereinstimmen, die wir an Google Cloud senden
+          # Wichtig: Die Audience hier MUSS mit der Audience im 'Authenticate to Google Cloud' Schritt übereinstimmen
+          TOKEN=$(ACTIONS_ID_TOKEN_REQUEST_URL="x" ACTIONS_ID_TOKEN_REQUEST_TOKEN="x" \
+                  /usr/bin/node -e "require('@actions/core').getIDToken('https://github.com/thspeil/PodTracker-DB').then(token => console.log(token))")
+          
+          echo "OIDC Token Payload (base64 decoded):"
+          echo $TOKEN | cut -d'.' -f2 | base64 -d | jq .
+          echo "Extracted 'sub' claim:"
+          echo $TOKEN | cut -d'.' -f2 | base64 -d | jq -r .sub
+        # Fügen Sie 'continue-on-error: true' hinzu, damit der Workflow auch bei Fehlern in diesem Schritt fortgesetzt wird
+        continue-on-error: true 
+
       - name: Authenticate to Google Cloud # Schritt zur Authentifizierung bei Google Cloud mit Workload Identity Federation
         id: 'auth' # ID für diesen Schritt, falls seine Ausgaben später benötigt werden
         uses: 'google-github-actions/auth@v2' # Offizielle GitHub Action für Google Cloud Authentifizierung
@@ -34,23 +51,6 @@ jobs:
           service_account: 'github-actions-deployer@amiable-mix-465520-u7.iam.gserviceaccount.com'
           # NEU: Fügen Sie die 'audience' hinzu, die mit Ihrer Google Cloud Konfiguration übereinstimmt
           audience: 'https://github.com/thspeil/PodTracker-DB' 
-
-      # NEUER DEBUGGING-SCHRITT: Zeigt den Inhalt des OIDC-Tokens an
-      - name: Debug OIDC Token Subject
-        run: |
-          # Fordert ein OIDC-Token an und extrahiert den 'sub'-Claim
-          # Das Audience-Feld muss hier mit der Audience übereinstimmen, die wir an Google Cloud senden
-          TOKEN=$(ACTIONS_ID_TOKEN_REQUEST_URL="x" ACTIONS_ID_TOKEN_REQUEST_TOKEN="x" \
-                  /usr/bin/node -e "require('@actions/core').getIDToken('https://github.com/thspeil/PodTracker-DB').then(token => console.log(token))")
-          
-          # Entschlüsselt den JWT-Header und Payload (der Teil zwischen den Punkten)
-          # und gibt den 'sub'-Claim aus.
-          # Wir verwenden 'jq' zum Parsen des JSON-Teils des Tokens
-          # Installiere jq, falls nicht vorhanden (auf ubuntu-latest ist es meist vorinstalliert)
-          echo "OIDC Token Payload (base64 decoded):"
-          echo $TOKEN | cut -d'.' -f2 | base64 -d | jq .
-          echo "Extracted 'sub' claim:"
-          echo $TOKEN | cut -d'.' -f2 | base64 -d | jq -r .sub
 
       - name: Set up Docker Buildx # Schritt zur Einrichtung von Docker Buildx für effizientes Image-Building
         uses: docker/setup-buildx-action@v3
@@ -75,5 +75,3 @@ jobs:
             DATABASE_URL=${{ secrets.NEON_DATABASE_URL }} # Lädt die Datenbank-URL sicher aus dem GitHub Secret
           # Zusätzliche Flags für den gcloud run deploy Befehl
           flags: --allow-unauthenticated --port 5000
-
-          
