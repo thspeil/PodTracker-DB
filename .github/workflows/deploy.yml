@@ -1,0 +1,58 @@
+name: Deploy to Cloud Run # Name des Workflows, sichtbar in GitHub Actions UI
+
+on:
+  push:
+    branches:
+      - main # Dieser Workflow wird ausgeführt, wenn Änderungen in den 'main'-Branch gepusht werden
+  workflow_dispatch: # Ermöglicht das manuelle Auslösen des Workflows über die GitHub Actions UI
+
+env:
+  PROJECT_ID: '396694012221' # Ihre Google Cloud Projektnummer
+  SERVICE_NAME: 'podcast-tracker-app' # Der Name Ihres Cloud Run Dienstes
+  REGION: 'europe-west3' # Ihre Cloud Run Region
+  IMAGE_NAME: 'gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}' # Das Docker-Image in Google Artifact Registry
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest # Der Runner, auf dem der Workflow ausgeführt wird
+    permissions:
+      contents: 'read' # Erforderlich, um den Code aus dem Repository auszulesen
+      id-token: 'write' # Erforderlich für Workload Identity Federation (OIDC-Authentifizierung)
+
+    steps:
+      - name: Checkout code # Schritt zum Klonen des Repositorys auf den Runner
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud # Schritt zur Authentifizierung bei Google Cloud mit Workload Identity Federation
+        id: 'auth' # ID für diesen Schritt, falls seine Ausgaben später benötigt werden
+        uses: 'google-github-actions/auth@v2' # Offizielle GitHub Action für Google Cloud Authentifizierung
+        with:
+          # Der vollständige Ressourcenname Ihres Workload Identity Providers in Google Cloud
+          # Ersetzt durch Ihre spezifischen IDs: github-pool-tsp und github-actions-tsp
+          workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool-tsp/providers/github-actions-tsp'
+          # Die E-Mail-Adresse des Google Cloud Service Accounts, dessen Identität angenommen werden soll
+          service_account: 'github-actions-deployer@amiable-mix-465520-u7.iam.gserviceaccount.com'
+
+      - name: Set up Docker Buildx # Schritt zur Einrichtung von Docker Buildx für effizientes Image-Building
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image # Schritt zum Bauen und Hochladen des Docker-Images
+        uses: docker/build-push-action@v5 # Offizielle GitHub Action zum Bauen und Pushen von Docker-Images
+        with:
+          push: true # Image soll in die Registry gepusht werden
+          tags: ${{ env.IMAGE_NAME }}:latest # Taggt das Image mit 'latest'
+          context: . # Der Build-Kontext ist das aktuelle Verzeichnis (wo das Dockerfile liegt)
+          cache-from: type=gha # Nutzt GitHub Actions Cache für schnellere Builds
+          cache-to: type=gha,mode=max # Speichert Build-Cache für zukünftige Builds
+
+      - name: Deploy to Cloud Run # Schritt zum Bereitstellen des Docker-Images auf Google Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2 # Offizielle GitHub Action für Cloud Run Deployment
+        with:
+          service: ${{ env.SERVICE_NAME }} # Name des Cloud Run Dienstes
+          image: ${{ env.IMAGE_NAME }}:latest # Das Image, das bereitgestellt werden soll
+          region: ${{ env.REGION }} # Die Region, in der der Dienst bereitgestellt wird
+          # Umgebungsvariablen, die an die Cloud Run-Anwendung übergeben werden
+          env_vars: |
+            DATABASE_URL=${{ secrets.NEON_DATABASE_URL }} # Lädt die Datenbank-URL sicher aus dem GitHub Secret
+          # Zusätzliche Flags für den gcloud run deploy Befehl
+          flags: --allow-unauthenticated --port 5000
