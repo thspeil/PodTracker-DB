@@ -23,7 +23,13 @@ jobs:
       - name: Checkout code # Schritt zum Klonen des Repositorys auf den Runner
         uses: actions/checkout@v4
 
-      # NEUER DEBUGGING-SCHRITT (VERSCHOBEN): Zeigt den Inhalt des OIDC-Tokens an
+      # NEU: Node.js einrichten, damit der Debug-Schritt funktioniert
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Verwenden Sie eine aktuelle Node.js-Version
+
+      # DEBUGGING-SCHRITT: Zeigt den Inhalt des OIDC-Tokens an
       # Dieser Schritt muss VOR der Authentifizierung bei Google Cloud liegen
       - name: Debug OIDC Token Subject
         run: |
