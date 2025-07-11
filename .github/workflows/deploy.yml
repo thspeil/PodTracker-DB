@@ -10,7 +10,7 @@ env:
   PROJECT_ID: '396694012221' # Ihre Google Cloud Projektnummer
   SERVICE_NAME: 'podcast-tracker-app' # Der Name Ihres Cloud Run Dienstes
   REGION: 'europe-west3' # Ihre Cloud Run Region
-  IMAGE_NAME: 'gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}' # Das Docker-Image in Google Artifact Registry
+  IMAGE_NAME: 'gcr.io/396694012221/podcast-tracker-app' # Das Docker-Image in Google Artifact Registry (direkt definiert)
 
 jobs:
   deploy:
