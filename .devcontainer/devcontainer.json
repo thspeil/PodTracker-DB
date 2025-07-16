@@ -1,0 +1,30 @@
+{
+  "name": "Python 3 with gcloud",
+  // Verwenden Sie ein offizielles Dev Container Image mit Python
+  // Sie können hier auch ein spezifischeres Image wählen, z.B. "mcr.microsoft.com/devcontainers/python:3.11"
+  "image": "mcr.microsoft.com/devcontainers/python:latest", 
+
+  "features": {
+    // Dies ist das Feature, das die Google Cloud CLI installiert
+    "ghcr.io/devcontainers/features/gcloud:1": {
+      "version": "latest",
+      "installComponents": [
+        // Fügen Sie hier weitere gcloud-Komponenten hinzu, falls benötigt (z.B. "gke-gcloud-auth-plugin")
+      ]
+    }
+  },
+
+  // Optional: VS Code Erweiterungen, die Sie in diesem Codespace haben möchten
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker"
+        // Fügen Sie hier weitere Erweiterungs-IDs hinzu
+      ]
+    }
+  },
+
+  // Optional: Befehle, die nach dem Erstellen des Codespace ausgeführt werden sollen
+  "postCreateCommand": "pip install --user -r requirements.txt || true" 
+}
