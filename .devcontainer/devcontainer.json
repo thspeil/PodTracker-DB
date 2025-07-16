@@ -1,30 +1,23 @@
 {
   "name": "Python 3 with gcloud",
-  // Verwenden Sie ein offizielles Dev Container Image mit Python
-  // Sie können hier auch ein spezifischeres Image wählen, z.B. "mcr.microsoft.com/devcontainers/python:3.11"
-  "image": "mcr.microsoft.com/devcontainers/python:latest", 
+  "image": "mcr.microsoft.com/devcontainers/python:latest",
 
-  "features": {
-    // Dies ist das Feature, das die Google Cloud CLI installiert
-    "ghcr.io/devcontainers/features/gcloud:1": {
-      "version": "latest",
-      "installComponents": [
-        // Fügen Sie hier weitere gcloud-Komponenten hinzu, falls benötigt (z.B. "gke-gcloud-auth-plugin")
-      ]
-    }
-  },
+  // Entfernen Sie den "features"-Abschnitt, da wir gcloud manuell installieren
+  // "features": {
+  //   "ghcr.io/devcontainers/features/gcloud:1": {
+  //     "version": "latest"
+  //   }
+  // },
 
-  // Optional: VS Code Erweiterungen, die Sie in diesem Codespace haben möchten
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
         "ms-azuretools.vscode-docker"
-        // Fügen Sie hier weitere Erweiterungs-IDs hinzu
       ]
     }
   },
 
-  // Optional: Befehle, die nach dem Erstellen des Codespace ausgeführt werden sollen
-  "postCreateCommand": "pip install --user -r requirements.txt || true" 
+  // Befehle, die nach dem Erstellen des Codespace ausgeführt werden sollen
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates gnupg && echo \"deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main\" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && sudo curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && sudo apt-get update && sudo apt-get install -y google-cloud-cli && pip install --user -r requirements.txt || true"
 }
