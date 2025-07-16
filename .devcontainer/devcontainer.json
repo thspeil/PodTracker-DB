@@ -13,4 +13,4 @@
 
   // Befehle, die nach dem Erstellen des Codespace ausgeführt werden sollen
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates gnupg git-lfs && echo \"deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main\" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && sudo curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && sudo apt-get update && sudo apt-get install -y google-cloud-cli && echo 'export PATH=\"$PATH:/usr/lib/google-cloud-sdk/bin\"' >> ~/.bashrc && source ~/.bashrc && pip install --user -r requirements.txt || true && gcloud --version"
-}
+} 
