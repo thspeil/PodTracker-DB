@@ -23,53 +23,6 @@ jobs:
       - name: Checkout code # Schritt zum Klonen des Repositorys auf den Runner
         uses: actions/checkout@v4
 
-      # DEBUGGING-SCHRITT: Zeigt den Inhalt des OIDC-Tokens an
-      # Dieser Schritt muss VOR der Authentifizierung bei Google Cloud liegen
-      # und verwendet curl/jq für Robustheit
-      - name: Debug OIDC Token Subject
-        run: |
-          # Fordert ein OIDC-Token an und extrahiert den 'sub'-Claim
-          # Die Audience hier MUSS mit der Audience im 'Authenticate to Google Cloud' Schritt übereinstimmen
-          TOKEN_REQUEST_URL="$ACTIONS_ID_TOKEN_REQUEST_URL"
-          TOKEN_REQUEST_TOKEN="$ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-          AUDIENCE="https://github.com/thspeil/PodTracker-DB" # Muss mit der Audience im Auth-Schritt übereinstimmen
-
-          # Überprüfen, ob die Umgebungsvariablen gesetzt sind
-          if [ -z "$TOKEN_REQUEST_URL" ] || [ -z "$TOKEN_REQUEST_TOKEN" ]; then
-            echo "Fehler: ACTIONS_ID_TOKEN_REQUEST_URL oder ACTIONS_ID_TOKEN_REQUEST_TOKEN nicht gesetzt (unerwartet)."
-            echo "Bitte stellen Sie sicher, dass 'id-token: write' in den Job-Berechtigungen vorhanden ist."
-            exit 1
-          fi
-
-          # Fordert das OIDC-Token mit curl an
-          TOKEN_RESPONSE=$(curl -s -X POST \
-                                -H "Authorization: Bearer $TOKEN_REQUEST_TOKEN" \
-                                -H "Content-Type: application/json" \
-                                -d "{\"audience\": \"$AUDIENCE\"}" \
-                                "$TOKEN_REQUEST_URL")
-          
-          # Extrahiert den JWT-Wert aus der JSON-Antwort
-          TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.value')
-
-          if [ -z "$TOKEN" ]; then
-            echo "Fehler: Konnte OIDC-Token nicht abrufen. Antwort: $TOKEN_RESPONSE"
-            exit 1
-          fi
-
-          echo "Raw OIDC Token:"
-          echo "$TOKEN"
-
-          echo "OIDC Token Payload (base64 decoded):"
-          echo "$TOKEN" | cut -d'.' -f2 | base64 -d | jq .
-
-          echo "Extracted 'sub' claim:"
-          echo "$TOKEN" | cut -d'.' -f2 | base64 -d | jq -r .sub
-
-          echo "Extracted 'repository' claim:"
-          echo "$TOKEN" | cut -d'.' -f2 | base64 -d | jq -r .repository
-        # Fügen Sie 'continue-on-error: true' hinzu, damit der Workflow auch bei Fehlern in diesem Schritt fortgesetzt wird
-        continue-on-error: true 
-
       - name: Authenticate to Google Cloud # Schritt zur Authentifizierung bei Google Cloud mit Workload Identity Federation
         id: 'auth' # ID für diesen Schritt, falls seine Ausgaben später benötigt werden
         uses: 'google-github-actions/auth@v2' # Offizielle GitHub Action für Google Cloud Authentifizierung
@@ -79,8 +32,8 @@ jobs:
           workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool-tsp/providers/github-actions-tsp'
           # Die E-Mail-Adresse des Service Accounts, dessen Identität angenommen werden soll
           service_account: 'github-actions-deployer@amiable-mix-465520-u7.iam.gserviceaccount.com'
-          # KORRIGIERT: Die 'audience' muss jetzt den vollständigen Repository-Pfad enthalten
-          audience: 'https://github.com/thspeil/PodTracker-DB' 
+          # KORRIGIERT: Die 'audience' muss dem 'aud'-Claim im OIDC-Token entsprechen (Repository-Besitzer)
+          audience: 'https://github.com/${{ github.repository_owner }}' 
 
       - name: Set up Docker Buildx # Schritt zur Einrichtung von Docker Buildx für effizientes Image-Building
         uses: docker/setup-buildx-action@v3
