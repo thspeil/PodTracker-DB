@@ -1,5 +1,5 @@
 {
-  "name": "Python 3 with gcloud (Debugging)",
+  "name": "Python 3 with gcloud (Fixing Key)",
   "image": "mcr.microsoft.com/devcontainers/python:latest",
 
   "customizations": {
@@ -13,5 +13,5 @@
 
   // Befehle, die nach dem Erstellen des Codespace ausgeführt werden sollen
   // 'set -e' beendet das Skript bei Fehlern. 'set -x' zeigt jeden ausgeführten Befehl.
-  "postCreateCommand": "set -e && set -x && sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates gnupg git-lfs && echo \"deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main\" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && sudo curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && sudo apt-get update && sudo apt-get install -y google-cloud-cli && echo 'export PATH=\"$PATH:/usr/lib/google-cloud-sdk/bin\"' >> ~/.bashrc && source ~/.bashrc && pip install --user -r requirements.txt || true && echo 'gcloud installation check:' && gcloud --version && echo 'postCreateCommand finished successfully.'"
+  "postCreateCommand": "set -e && set -x && sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates gnupg git-lfs && sudo curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && echo \"deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main\" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && sudo apt-get update && sudo apt-get install -y google-cloud-cli && echo 'export PATH=\"$PATH:/usr/lib/google-cloud-sdk/bin\"' >> ~/.bashrc && source ~/.bashrc && pip install --user -r requirements.txt || true && echo 'gcloud installation check:' && gcloud --version && echo 'postCreateCommand finished successfully.'"
 }
