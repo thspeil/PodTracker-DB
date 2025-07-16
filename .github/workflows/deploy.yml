@@ -81,7 +81,7 @@ jobs:
           service_account: 'github-actions-deployer@amiable-mix-465520-u7.iam.gserviceaccount.com'
           # KORRIGIERT: Die 'audience' muss dem Wert entsprechen, den GitHub tatsächlich sendet (vollständiger Repository-Pfad)
           # Basierend auf dem Log ist der tatsächlich ausgestellte 'aud' Claim: https://github.com/thspeil
-          audience: 'https://github.com/thspeil/PodTracker-DB' 
+          audience: 'https://github.com/thspeil' 
 
       - name: Set up Docker Buildx # Schritt zur Einrichtung von Docker Buildx für effizientes Image-Building
         uses: docker/setup-buildx-action@v3
