@@ -4,6 +4,21 @@ FROM python:3.12-slim
 # Setze das Arbeitsverzeichnis im Container
 WORKDIR /app
 
+# Installiere System-Abhängigkeiten, die für Python-Pakete wie psycopg2-binary benötigt werden
+# apt-get update: Aktualisiert die Paketlisten
+# apt-get install -y --no-install-recommends: Installiert Pakete ohne empfohlene Pakete
+# build-essential: Enthält Compiler und andere Tools, die für das Kompilieren von C-Erweiterungen benötigt werden
+# libpq-dev: Enthält Header-Dateien und statische Bibliotheken für PostgreSQL-Client-Entwicklung (für psycopg2)
+# gcc: C Compiler
+# python3-dev: Python-Entwicklungsdateien
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    gcc \
+    python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 # Kopiere die requirements.txt in das Arbeitsverzeichnis
 COPY requirements.txt .
 
@@ -11,7 +26,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Kopiere den REST des Anwendungscodes in das Arbeitsverzeichnis
-# DIESER SCHRITT WIRD VOR db.create_all() VERSCHOBEN
 COPY . .
 
 # Führe die Datenbankmigration aus (Tabellen erstellen)
