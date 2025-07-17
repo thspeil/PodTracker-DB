@@ -4,7 +4,6 @@ on:
   push:
     branches: [ main ]
 
-# Füge diese Permissions-Sektion hinzu!
 permissions:
   contents: read # Erforderlich, um den Code auszuchecken
   id-token: write # Erforderlich für Workload Identity Federation (OIDC)
@@ -14,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4 # Aktualisiert auf v4
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v5 # Aktualisiert auf v5
       with:
         python-version: '3.12'
-        cache: 'pip'
+        cache: 'pip' # Füge Caching für Pip-Abhängigkeiten hinzu
 
     - name: Install dependencies
       run: |
@@ -29,10 +28,10 @@ jobs:
 
     - name: Run tests
       run: |
-        echo "Tests werden hier ausgeführt..."
+        echo "Tests werden hier ausgeführt..." # Platzhalter
 
     - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
+      uses: google-github-actions/auth@v2 # Aktualisiert auf v2
       with:
         workload_identity_provider: 'projects/396694012221/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces'
         service_account: 'my-service-account@amiable-mix-465520-u7.iam.gserviceaccount.com'
@@ -54,7 +53,10 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Deploy to Cloud Run
-      uses: google-github-actions/deploy-cloudrun@v2
+      uses: google-github-actions/deploy-cloudrun@v2 # Aktualisiert auf v2
       with:
-        service: podtracker-service
+        service: podcast-tracker-app # GEÄNDERT auf den bestehenden Dienst
         image: gcr.io/amiable-mix-465520-u7/podtracker-image:latest
+        region: europe-west3 # GEÄNDERT auf die bevorzugte Region
+        allow-unauthenticated: true # Hinzugefügt, da der Dienst unauthentifizierten Zugriff erlaubt
+        # Der credentials-Parameter wurde entfernt, da Workload Identity Federation verwendet wird
