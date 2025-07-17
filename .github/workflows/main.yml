@@ -3,13 +3,24 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: '396694012221'
+  SERVICE_NAME: 'podcast-tracker-app'
+  REGION: 'europe-west3'
+  IMAGE_NAME: 'gcr.io/396694012221/podcast-tracker-app'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -23,17 +34,33 @@ jobs:
 
     - name: Run tests
       run: |
-        # Hier werden wir die Testbefehle hinzufügen, sobald wir sie haben
+        # Hier kannst du Testbefehle hinzufügen, sobald du welche hast
 
     - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v0
+      uses: google-github-actions/auth@v2
       with:
-        workload_identity_provider: 'projects/396694012221/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces'
-        service_account: 'my-service-account@amiable-mix-465520-u7.iam.gserviceaccount.com'
+        workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces'
+        service_account: 'github-actions-deployer@amiable-mix-465520-u7.iam.gserviceaccount.com'
+        audience: 'https://iam.googleapis.com/projects/396694012221/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces'
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        push: true
+        tags: ${{ env.IMAGE_NAME }}:latest
+        context: .
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
     - name: Deploy to Cloud Run
-      uses: google-github-actions/deploy-cloudrun@v0
+      uses: google-github-actions/deploy-cloudrun@v2
       with:
-        service: podtracker-service
-        image: gcr.io/amiable-mix-465520-u7/podtracker-image
-        credentials: ${{ secrets.GCP_CREDENTIALS }}
+        service: ${{ env.SERVICE_NAME }}
+        image: ${{ env.IMAGE_NAME }}:latest
+        region: ${{ env.REGION }}
+        env_vars: |
+          DATABASE_URL=${{ secrets.NEON_DATABASE_URL }}
+        flags: --allow-unauthenticated --port 5000
