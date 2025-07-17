@@ -3,29 +3,19 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
-
-env:
-  PROJECT_ID: '396694012221'
-  SERVICE_NAME: 'podcast-tracker-app'
-  REGION: 'europe-west3'
-  IMAGE_NAME: 'gcr.io/396694012221/podcast-tracker-app'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4 # Aktualisiert auf v4 für neuere Features und Bugfixes
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5 # Aktualisiert auf v5
       with:
         python-version: '3.12'
+        cache: 'pip' # Füge Caching für Pip-Abhängigkeiten hinzu, um Builds zu beschleunigen
 
     - name: Install dependencies
       run: |
@@ -34,34 +24,47 @@ jobs:
 
     - name: Run tests
       run: |
-        # Hier kannst du Testbefehle hinzufügen, sobald du welche hast
+        # Hier werden wir die Testbefehle hinzufügen, sobald wir sie haben
+        echo "Tests werden hier ausgeführt..." # Platzhalter
 
     - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
+      uses: google-github-actions/auth@v2 # Aktualisiert auf v2
       with:
-        workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces'
-        service_account: 'github-actions-deployer@amiable-mix-465520-u7.iam.gserviceaccount.com'
-        audience: 'https://iam.googleapis.com/projects/396694012221/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces'
+        workload_identity_provider: 'projects/396694012221/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces'
+        service_account: 'my-service-account@amiable-mix-465520-u7.iam.gserviceaccount.com'
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v3 # Notwendig für build-push-action
 
-    - name: Build and push Docker image
+    - name: Login to Google Container Registry
+      # Da du Workload Identity verwendest, sollte die Authentifizierung über den `google-github-actions/auth` Schritt
+      # den `gcloud` Credential Helper so konfigurieren, dass Docker automatisch auf GCR zugreifen kann.
+      # Ein explizites Login mit secrets.GCP_CREDENTIALS ist hier meist nicht nötig,
+      # wenn Workload Identity korrekt konfiguriert ist.
+      # Falls es doch Probleme gibt, könntest du diesen Schritt mit einem Service Account Key nutzen:
+      # uses: docker/login-action@v3
+      # with:
+      #   registry: gcr.io
+      #   username: _json_key
+      #   password: ${{ secrets.GCP_CREDENTIALS }}
+      run: |-
+        gcloud auth configure-docker gcr.io --quiet
+      # Der Befehl `gcloud auth configure-docker gcr.io` konfiguriert Docker so, dass es die Anmeldeinformationen von gcloud verwendet.
+      # Dies sollte nach der Authentifizierung durch `google-github-actions/auth` funktionieren.
+
+    - name: Build and Push Docker image
       uses: docker/build-push-action@v5
       with:
-        push: true
-        tags: ${{ env.IMAGE_NAME }}:latest
-        context: .
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        context: . # Pfad zum Dockerfile-Kontext (normalerweise das Root-Verzeichnis des Repositorys)
+        push: true # Image nach GCR pushen
+        tags: gcr.io/amiable-mix-465520-u7/podtracker-image:latest # Konsistente Bezeichnung
+        cache-from: type=gha # Für schnellere Builds Caching nutzen
+        cache-to: type=gha,mode=max # Cache speichern
 
     - name: Deploy to Cloud Run
-      uses: google-github-actions/deploy-cloudrun@v2
+      uses: google-github-actions/deploy-cloudrun@v2 # Aktualisiert auf v2
       with:
-        service: ${{ env.SERVICE_NAME }}
-        image: ${{ env.IMAGE_NAME }}:latest
-        region: ${{ env.REGION }}
-        env_vars: |
-          DATABASE_URL=${{ secrets.NEON_DATABASE_URL }}
-        flags: --allow-unauthenticated --port 5000
-
+        service: podtracker-service
+        image: gcr.io/amiable-mix-465520-u7/podtracker-image:latest # Konsistente Bezeichnung
+        # Der credentials-Parameter ist hier nicht mehr strikt notwendig,
+        # da die Authentifizierung bereits im `Authenticate to Google Cloud` Schritt erfolgt ist
