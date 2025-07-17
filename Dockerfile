@@ -1,5 +1,5 @@
 # Verwende ein offizielles Python-Image als Basis-Image
-FROM python:3.12-slim-buster
+FROM python:3.12-slim
 
 # Setze das Arbeitsverzeichnis im Container
 WORKDIR /app
@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Führe die Datenbankmigration aus (Tabellen erstellen)
 # Dies stellt sicher, dass db.create_all() ausgeführt wird, bevor die App startet
-# KORRIGIERTE ZEILE: Manuelles Pushen/Poppen des App-Kontextes
+# Manuelles Pushen/Poppen des App-Kontextes
 RUN python -c "from app import app, db; app.app_context().push(); db.create_all(); app.app_context().pop()"
 
 # Kopiere den Rest des Anwendungscodes in das Arbeitsverzeichnis
