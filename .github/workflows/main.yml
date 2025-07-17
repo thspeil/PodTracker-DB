@@ -51,6 +51,9 @@ jobs:
         tags: gcr.io/amiable-mix-465520-u7/podtracker-image:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+                  # NEU: Füge Build-Argumente hinzu
+        build-args: |
+          SECRET_KEY_FLASK_LOGIN=${{ secrets.SECRET_KEY_FLASK_LOGIN }}
 
     - name: Deploy to Cloud Run
       uses: google-github-actions/deploy-cloudrun@v2
