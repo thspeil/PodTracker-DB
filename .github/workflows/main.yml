@@ -15,20 +15,31 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # NEU: Authentifizierung über Workload Identity Federation (WIF) / OIDC
+    - name: Authenticate to Google Cloud (WIF)
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        # Dein tatsächlicher Workload Identity Provider Ressourcenname aus dem Screenshot
+        workload_identity_provider: projects/396694012221/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces
+        # DIES IST DER SERVICE ACCOUNT, DESSEN IDENTITÄT ANGENOMMEN WIRD
+        service_account: serv-acc-github-podtr-tsp@amiable-mix-465520-u7.iam.gserviceaccount.com 
+        # Optional: project_id: amiable-mix-465520-u7 # Kann hier oder in setup-gcloud gesetzt werden
+
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: amiable-mix-465520-u7 # Dein GCP Projekt ID
-        service_account_key: ${{ secrets.GCP_SA_KEY }} # Dein Service Account Key Secret
-        export_default_credentials: true
+        # service_account_key: ${{ secrets.GCP_SA_KEY }} # DIESE ZEILE WIRD ENTFERNT!
+        # export_default_credentials: true # Nicht mehr nötig, da auth@v2 dies handhabt
 
     - name: Configure Docker for Google Container Registry
       run: gcloud auth configure-docker
 
-    # NEU HINZUGEFÜGT: Setup Docker Buildx
+    # Setup Docker Buildx bleibt wie gehabt
     - name: Set up Docker Buildx
-      id: buildx # Wichtig: ID für den Zugriff auf Outputs
-      uses: docker/setup-buildx-action@v3 # Verwende eine neuere Version, falls verfügbar
+      id: buildx
+      uses: docker/setup-buildx-action@v3
 
     - name: Build and Push Docker image
       uses: docker/build-push-action@v5
@@ -38,23 +49,11 @@ jobs:
         tags: gcr.io/amiable-mix-465520-u7/podtracker-image:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        # NEU: Verwende den konfigurierten Builder
         builder: ${{ steps.buildx.outputs.name }}
-        # build-args sind hier NICHT mehr notwendig, da der Secret Key nur zur Laufzeit verwendet wird.
-        # Die Datenbankinitialisierung erfolgt jetzt über das start.sh Skript zur Laufzeit.
 
     - name: Deploy to Cloud Run
       uses: google-github-actions/deploy-cloudrun@v1
       with:
         service: podcast-tracker-app # Dein Cloud Run Dienstname
         image: gcr.io/amiable-mix-465520-u7/podtracker-image:latest
-        region: europe-west3 # Deine Cloud Run Region
-        # Umgebungsvariablen für Cloud Run (SECRET_KEY_FLASK_LOGIN und DATABASE_URL)
-        # Diese müssen in den Cloud Run Service-Einstellungen oder hier als env_vars gesetzt sein.
-        # Es wird empfohlen, sie in den Service-Einstellungen zu setzen, wenn sie sensibel sind.
-        # Wenn sie hier gesetzt werden, müssen sie als secrets in GitHub Actions hinterlegt sein.
-        # Beispiel:
-        # env_vars: |
-        #   SECRET_KEY_FLASK_LOGIN=${{ secrets.SECRET_KEY_FLASK_LOGIN }}
-        #   DATABASE_URL=${{ secrets.DATABASE_URL }}
-        # Da du sie bereits in den Cloud Run Service-Einstellungen hast, ist dies hier nicht zwingend nötig.
+        region: europe-west3
