@@ -64,3 +64,4 @@ jobs:
         env_vars: |
           DATABASE_URL=${{ secrets.NEON_DATABASE_URL }}
         flags: --allow-unauthenticated --port 5000
+
