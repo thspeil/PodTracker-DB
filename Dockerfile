@@ -1,30 +1,22 @@
-# Verwende ein offizielles Python-Laufzeit-Image als Basis
-FROM python:3.12-slim-bookworm
+# Verwende ein offizielles Python-Image als Basis-Image
+FROM python:3.9-slim-buster
 
 # Setze das Arbeitsverzeichnis im Container
 WORKDIR /app
 
-# Installiere alle Produktionsabhängigkeiten
-# Kopiere zuerst requirements.txt, um Docker-Cache zu nutzen
+# Kopiere die requirements.txt in das Arbeitsverzeichnis
 COPY requirements.txt .
+
+# Installiere die Python-Abhängigkeiten
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiere die Python-Anwendung
-COPY app.py .
+# Kopiere den Rest des Anwendungscodes in das Arbeitsverzeichnis
+COPY . .
 
-# Kopiere die HTML-Template-Dateien in den Root des Arbeitsverzeichnisses
-# Da template_folder='.' ist, müssen diese hier liegen
-COPY podcast_tracker-DB.html .
-COPY Impressum.html .
-COPY Datenschutz.html .
+# Führe die Datenbankmigration aus (Tabellen erstellen)
+# Dies stellt sicher, dass db.create_all() ausgeführt wird, bevor die App startet
+RUN python -c "from app import app, db; with app.app_context(): db.create_all()"
 
-# Kopiere den gesamten static-Ordner in das Arbeitsverzeichnis
-# Wichtig: Der Zielpfad 'static/' muss mit einem Schrägstrich enden, um anzuzeigen, dass es ein Verzeichnis ist
-COPY static/ static/
-
-# Exponiere den Port, auf dem die Flask-App läuft
-EXPOSE 5000
-
-# Starte die Flask-Anwendung mit Gunicorn, wenn der Container startet
-# 'app:app' bedeutet, dass die Flask-App-Instanz 'app' aus der Datei 'app.py' verwendet wird
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# Definiere den Befehl zum Starten der Anwendung
+# Cloud Run erwartet, dass die Anwendung auf dem durch die Umgebungsvariable PORT definierten Port lauscht
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
