@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read # Erforderlich, um den Code auszuchecken
+  contents: read # Erforderlich, um den Code auszucheckt
   id-token: write # Erforderlich für Workload Identity Federation (OIDC)
 
 jobs:
@@ -25,6 +25,11 @@ jobs:
     - name: Configure Docker for Google Container Registry
       run: gcloud auth configure-docker
 
+    # NEU HINZUGEFÜGT: Setup Docker Buildx
+    - name: Set up Docker Buildx
+      id: buildx # Wichtig: ID für den Zugriff auf Outputs
+      uses: docker/setup-buildx-action@v3 # Verwende eine neuere Version, falls verfügbar
+
     - name: Build and Push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -33,6 +38,8 @@ jobs:
         tags: gcr.io/amiable-mix-465520-u7/podtracker-image:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        # NEU: Verwende den konfigurierten Builder
+        builder: ${{ steps.buildx.outputs.name }}
         # build-args sind hier NICHT mehr notwendig, da der Secret Key nur zur Laufzeit verwendet wird.
         # Die Datenbankinitialisierung erfolgt jetzt über das start.sh Skript zur Laufzeit.
 
