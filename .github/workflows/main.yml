@@ -21,9 +21,10 @@ jobs:
       uses: google-github-actions/auth@v2
       with:
         # Dein tatsächlicher Workload Identity Provider Ressourcenname aus dem Screenshot
+        # HINWEIS: Hier wird der Pool als Ganzes referenziert, da die Bindung ein '*' am Ende hat.
         workload_identity_provider: projects/396694012221/locations/global/workloadIdentityPools/github-podtracker-pool-tsp/providers/github-codespaces
-        # DIES IST DER SERVICE ACCOUNT, DESSEN IDENTITÄT ANGENOMMEN WIRD
-        service_account: serv-acc-github-podtr-tsp@amiable-mix-465520-u7.iam.gserviceaccount.com 
+        # DIES IST DER SERVICE ACCOUNT, DESSEN IDENTITÄT ANGENOMMEN WIRD (Deine korrigierte E-Mail-Adresse)
+        service_account: my-service-account@amiable-mix-465520-u7.iam.gserviceaccount.com
         # Optional: project_id: amiable-mix-465520-u7 # Kann hier oder in setup-gcloud gesetzt werden
 
     - name: Set up Google Cloud SDK
