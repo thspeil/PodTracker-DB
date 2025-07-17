@@ -33,4 +33,5 @@
     # Definiere den Befehl zum Starten der Anwendung
     # Cloud Run erwartet, dass die Anwendung auf dem durch die Umgebungsvariable PORT definierten Port lauscht
     CMD ["./start.sh"]
+
     
