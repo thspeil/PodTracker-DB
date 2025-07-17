@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read # Erforderlich, um den Code auszucheckt
+  contents: read # Erforderlich, um den Code auszuchecken
   id-token: write # Erforderlich für Workload Identity Federation (OIDC)
 
 jobs:
