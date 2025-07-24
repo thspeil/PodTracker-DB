@@ -452,6 +452,10 @@
             white-space: nowrap;
             padding-right: 5px; /* Kleiner Puffer */
         }
+        .feed-podcast-name a { /* Link-Styling für Podcast-Namen */
+            @apply text-blue-600 hover:underline; /* Tailwind-Link-Styling */
+        }
+
 
         .feed-header-col.header-rss-url,
         .feed-url {
@@ -510,9 +514,7 @@
             white-space: nowrap;
             cursor: help;
         }
-        .podcast-name a { /* Link-Styling für Podcast-Namen */
-            @apply text-blue-600 hover:underline;
-        }
+        /* Link-Styling für Podcast-Namen wird durch .feed-podcast-name a oben gesetzt */
 
 
         .episode-title {
@@ -1015,7 +1017,7 @@
                         const nameA = (a.name || a.url).toLowerCase();
                         const nameB = (b.name || b.url).toLowerCase();
                         if (topicA < topicB) return -1;
-                        if (topicA > topicB) return 1;
+                        if (topicB < topicA) return 1; // Korrektur: topicB < topicA
                         return nameA.localeCompare(nameB);
                     });
                     allEpisodes.sort((a, b) => new Date(b.pub_date) - new Date(a.pub_date));
@@ -1052,7 +1054,7 @@
                     const nameA = (a.name || a.url).toLowerCase();
                     const nameB = (b.name || b.url).toLowerCase();
                     if (topicA < topicB) return -1;
-                    if (topicA > topicB) return 1;
+                    if (topicB < topicA) return 1; // Korrektur: topicB < topicA
                     return nameA.localeCompare(nameB);
                 });
                 allEpisodes.sort((a, b) => new Date(b.pub_date) - new Date(a.pub_date));
@@ -1181,6 +1183,11 @@
                 const feedTopic = feed.topic || 'Klicken zum Bearbeiten';
                 const podcastName = feed.name || feed.url; 
 
+                // NEU: Podcast-Name als Link zur Homepage_url
+                const podcastNameLink = feed.homepage_url ? 
+                    `<a href="${feed.homepage_url}" target="_blank" class="text-blue-600 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>` :
+                    highlightText(podcastName, currentSearchTerm);
+
                 return `
                     <div class="feed-item">
                         <div class="feed-checkbox-container">
@@ -1188,8 +1195,8 @@
                                ${isChecked ? 'checked' : ''} 
                                onclick="toggleFeedActiveStatus(${feed.id}, this)">
                         </div>
-                    <div class="feed-podcast-name" title="${podcastName}">${highlightText(podcastName, currentSearchTerm)}</div>
-                    <div class="feed-url" title="${feed.url}"><a href="${feed.url}" target="_blank" class="text-blue-600 hover:underline">${feed.url}</a></div> <!-- RSS-Adresse als Link -->
+                    <div class="feed-podcast-name" title="${podcastName}">${podcastNameLink}</div>
+                    <div class="feed-url" title="${feed.url}">${feed.url}</div> <!-- RSS-Adresse ist jetzt reiner Text -->
                     <span class="editable feed-topic" onclick="makeEditableFeedTopic(this, ${feed.id})">${highlightText(feedTopic, currentSearchTerm)}</span>
                     <button class="remove-feed" onclick="removeFeed(${feed.id})">Entfernen</button>
                 </div>
