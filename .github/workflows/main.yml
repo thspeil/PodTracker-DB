@@ -69,3 +69,4 @@ jobs:
         region: europe-west3
         flags: --allow-unauthenticated # Erlaubt unauthentifizierten Zugriff auf den Cloud Run Dienst
 
+
