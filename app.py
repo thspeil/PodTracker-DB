@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template, send_from_directory, flash
+from flask import Flask, request, jsonify, render_template, send_from_directory, flash, redirect, url_for # Hinzugefügt: redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -18,6 +18,8 @@ load_dotenv()
 app = Flask(__name__, static_folder='static', template_folder='.')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FLASK_LOGIN', 'your_super_secret_key_that_you_must_change_in_production')
+# Korrektur: basedir definieren
+basedir = os.path.abspath(os.path.dirname(__file__)) # Korrektur: basedir definieren
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'podcast_tracker.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Deaktiviert Warnungen zur Änderungsverfolgung
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(minutes=20) # Session-Dauer für Flask-Login
@@ -72,7 +74,6 @@ class PodcastFeed(db.Model):
     topic = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True)
     last_checked = db.Column(db.DateTime, default=datetime.utcnow)
-    # NEU: Feld für die Homepage-URL des Podcasts
     homepage_url = db.Column(db.String(500)) 
     episodes = db.relationship('Episode', backref='feed', lazy=True, cascade="all, delete-orphan")
 
@@ -109,7 +110,7 @@ def parse_rss_feed(feed_url):
         # Namespace für iTunes-Tags
         itunes_ns = {'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd'}
 
-        # NEU: Homepage URL extrahieren (oft im <channel><link> Tag)
+        # Homepage URL extrahieren (oft im <channel><link> Tag)
         homepage_url = None
         channel_link = root.find('.//channel/link')
         if channel_link is not None and channel_link.text:
@@ -383,10 +384,10 @@ def import_feeds_xlsx():
         if existing_feed:
             try:
                 if feed_name and not existing_feed.name: 
-                    existing_feed.name = feed_name
-                if feed_topic and not existing_feed.topic: 
-                    existing_feed.topic = feed_topic
-                existing_feed.is_active = feed_is_active
+                    existing_feed.name = name
+                if topic and not existing_feed.topic: 
+                    existing_feed.topic = topic
+                existing_feed.is_active = is_active
                 existing_feed.homepage_url = homepage_url # Homepage URL aktualisieren
                 db.session.commit()
                 updated_count += 1
