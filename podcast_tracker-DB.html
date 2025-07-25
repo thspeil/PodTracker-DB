@@ -464,7 +464,8 @@
 
         .podcast-name {
             font-weight: 600;
-            color: #667eea;
+            /* KORRIGIERT: Farbe auf blau geändert */
+            color: #667eea; 
             max-width: 292.5px; 
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1421,9 +1422,9 @@
                     `<a href="${episode.url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${highlightText(episode.title, currentSearchTerm)}</a>` :
                     `${highlightText(episode.title, currentSearchTerm)}`;
 
-                // KORREKTUR: Podcast-Name in der Tabelle verlinken und fett
+                // KORREKTUR: Podcast-Name in der Tabelle verlinken und fett, Farbe auf blau
                 const podcastNameLinkHtml = (feed && feed.homepage_url) ?
-                    `<a href="${feed.homepage_url}" target="_blank" rel="noopener noreferrer" class="font-bold text-gray-900 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>` :
+                    `<a href="${feed.homepage_url}" target="_blank" rel="noopener noreferrer" class="font-bold text-blue-600 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>` :
                     `<span class="font-bold text-gray-900">${highlightText(podcastName, currentSearchTerm)}</span>`;
 
 

@@ -476,20 +476,29 @@ def refresh_episodes_endpoint(feed_id): # Umbenannt von update_feed zur besseren
             Episode.query.filter_by(feed_id=feed.id).delete()
             db.session.commit()
 
+            new_episodes_count = 0
             for ep_data in episodes_data:
                 ep_data['feed_id'] = feed.id
                 ep_data.setdefault('is_favorite', False)
+                
+                # DEBUGGING PRINT: Überprüfen, ob Host vorhanden ist, bevor er hinzugefügt wird
+                print(f"DEBUG: Preparing episode '{ep_data.get('title', 'N/A')}', Host: '{ep_data.get('host', 'N/A')}' for feed ID {feed.id}")
+                
                 episode = Episode(**ep_data)
                 db.session.add(episode)
+                new_episodes_count += 1
             
             db.session.commit()
+            print(f"DEBUG: Committed {new_episodes_count} new episodes for feed {feed.id}. Host values should be saved.") # DEBUG Print
             flash(f"Feed '{feed.name}' und Episoden erfolgreich aktualisiert!", "success")
             return jsonify({"message": f"Feed '{feed.name}' und Episoden erfolgreich aktualisiert!"}), 200
         except Exception as e:
             db.session.rollback()
+            print(f"ERROR: Failed to update feed {feed.id} - {str(e)}") # DEBUG Print for exceptions
             flash(f"Fehler beim Aktualisieren des Feeds: {str(e)}", "danger")
             return jsonify({"error": f"Fehler beim Aktualisieren des Feeds: {str(e)}"}), 500
     else:
+        print(f"ERROR: Failed to parse RSS feed {feed_url} during refresh.") # DEBUG Print for parsing failure
         flash("Fehler beim Parsen des RSS-Feeds während der Aktualisierung.", "danger")
         return jsonify({"error": "Fehler beim Parsen des RSS-Feeds während der Aktualisierung."}), 400
 
