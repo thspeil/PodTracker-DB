@@ -88,11 +88,16 @@ class Episode(db.Model):
 
 # Hilfsfunktion zur URL-Validierung (korrigierte Python-Version)
 def isValidUrl(url_string):
+    if not isinstance(url_string, str): # Sicherstellen, dass es ein String ist
+        return False
     try:
         result = urlparse(url_string)
         # Überprüfe, ob sowohl ein Schema (http, https) als auch ein Netzwerk-Ort (Domain) vorhanden ist
         return all([result.scheme, result.netloc])
-    except:
+    except ValueError: # urlparse kann ValueError werfen
+        return False
+    except Exception as e:
+        print(f"DEBUG: isValidUrl unexpected error for '{url_string}': {e}")
         return False
 
 # Hilfsfunktion zum Parsen von RSS-Feeds
@@ -101,8 +106,9 @@ def parse_rss_feed(feed_url):
     Ruft einen RSS-Feed ab und parst ihn, um Episodendaten und die Homepage-URL zu extrahieren.
     Priorisiert spezifischere Homepage-URLs.
     """
+    print(f"DEBUG: Starte Parsing für Feed: {feed_url}")
     try:
-        response = requests.get(feed_url, timeout=10)
+        response = requests.get(feed_url, timeout=15) # Timeout leicht erhöht
         response.raise_for_status() # Löst einen HTTPError für schlechte Antworten (4xx oder 5xx) aus
         
         # XML-Inhalt parsen
@@ -113,76 +119,143 @@ def parse_rss_feed(feed_url):
         namespaces = {
             'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
             'atom': 'http://www.w3.org/2005/Atom',
-            'googleplay': 'http://www.google.com/schemas/play-podcasts/1.0' # Korrigierter Google Play Namespace
+            'googleplay': 'http://www.google.com/schemas/play-podcasts/1.0', # Korrigierter Google Play Namespace
+            'media': 'http://search.yahoo.com/mrss/', # Hinzugefügt für media:content
+            'webfeeds': 'http://webfeeds.org/rss/1.0' # Für webfeeds:url (Alternative Homepage-URL)
         }
 
         # --- Homepage URL extrahieren (Hierarchie der Präferenzen) ---
         homepage_url = None
 
-        # 1. itunes:url oder itunes:feedlink (spezifisch für Podcast-Homepage)
-        itunes_url_tag = root.find('.//channel/itunes:url', namespaces)
-        if itunes_url_tag is None:
-            itunes_url_tag = root.find('.//channel/itunes:feedlink', namespaces)
-        if itunes_url_tag is not None and itunes_url_tag.text and isValidUrl(itunes_url_tag.text):
-            homepage_url = itunes_url_tag.text
-        
-        # 2. atom:link rel="alternate" (kann auch auf Homepage verweisen)
+        # 1. itunes:new-feed-url (falls Feed umgezogen ist)
+        new_feed_url_tag = root.find('.//itunes:new-feed-url', namespaces)
+        if new_feed_url_tag is not None and new_feed_url_tag.text and isValidUrl(new_feed_url_tag.text):
+            homepage_url = new_feed_url_tag.text
+            print(f"DEBUG: Homepage found (itunes:new-feed-url): {homepage_url}")
+
+        # 2. itunes:url oder itunes:feedlink (spezifisch für Podcast-Homepage)
         if homepage_url is None:
-            atom_link = root.find('.//channel/atom:link[@rel="alternate"]', namespaces)
+            itunes_url_tag = root.find('.//channel/itunes:url', namespaces)
+            if itunes_url_tag is None:
+                itunes_url_tag = root.find('.//channel/itunes:feedlink', namespaces) # itunes:feedlink ist seltener
+            if itunes_url_tag is not None and itunes_url_tag.text and isValidUrl(itunes_url_tag.text):
+                homepage_url = itunes_url_tag.text
+                print(f"DEBUG: Homepage found (itunes): {homepage_url}")
+        
+        # 3. atom:link rel="alternate" (kann auch auf Homepage verweisen, oft der "Standard" in neueren Feeds)
+        if homepage_url is None:
+            # Suche nach atom:link mit rel="alternate" und type="text/html"
+            atom_link = root.find('.//channel/atom:link[@rel="alternate"][@type="text/html"]', namespaces)
             if atom_link is not None and 'href' in atom_link.attrib and isValidUrl(atom_link.attrib['href']):
                 homepage_url = atom_link.attrib['href']
+                print(f"DEBUG: Homepage found (atom html): {homepage_url}")
 
-        # 3. googleplay:link (auch spezifischer)
+        # 4. googleplay:link (auch spezifischer)
         if homepage_url is None:
             googleplay_link = root.find('.//channel/googleplay:link', namespaces)
             if googleplay_link is not None and 'href' in googleplay_link.attrib and isValidUrl(googleplay_link.attrib['href']):
                 homepage_url = googleplay_link.attrib['href']
+                print(f"DEBUG: Homepage found (googleplay): {homepage_url}")
 
-        # 4. Fallback: Standard <channel><link> (generischer Link, kann auch der RSS-Feed selbst sein)
+        # 5. webfeeds:url (spezifisch für die Website)
+        if homepage_url is None:
+            webfeeds_url_tag = root.find('.//webfeeds:url', namespaces)
+            if webfeeds_url_tag is not None and webfeeds_url_tag.text and isValidUrl(webfeeds_url_tag.text):
+                homepage_url = webfeeds_url_tag.text
+                print(f"DEBUG: Homepage found (webfeeds): {homepage_url}")
+
+
+        # 6. Fallback: Standard <channel><link> (generischer Link, kann auch der RSS-Feed selbst sein, aber oft die Homepage)
         if homepage_url is None:
             channel_link = root.find('.//channel/link')
             if channel_link is not None and channel_link.text and isValidUrl(channel_link.text):
                 homepage_url = channel_link.text
+                print(f"DEBUG: Homepage found (channel link fallback): {homepage_url}")
             
         # Wenn immer noch keine Homepage_url gefunden wurde, setze auf None
         if homepage_url is None:
             print(f"Warnung: Keine spezifische Homepage-URL für {feed_url} gefunden. Verbleibt None.")
 
-        # --- Episoden-Daten extrahieren (unverändert) ---
+        # --- Episoden-Daten extrahieren ---
         for item in root.findall('.//item'):
             title = item.find('title').text if item.find('title') is not None else 'No Title'
             description = item.find('description').text if item.find('description') is not None else 'No Description'
             pub_date_str = item.find('pubDate').text if item.find('pubDate') is not None else None
             
             episode_url = None
+            
+            # Priorität der Episode URL: enclosure (audio/video) > media:content (audio/video) > guid (wenn isPermalink="true") > item/link (webpage)
+            
+            # 1. Check for standard <enclosure> (often the direct audio file)
             enclosure = item.find('enclosure')
-            if enclosure is not None and 'url' in enclosure.attrib:
+            if enclosure is not None and 'url' in enclosure.attrib and isValidUrl(enclosure.attrib['url']):
                 episode_url = enclosure.attrib['url']
-            elif item.find('link') is not None:
-                episode_url = item.find('link').text
+                # print(f"DEBUG: Found episode URL in enclosure for '{title}': {episode_url}")
+            
+            # 2. Check for media:content (common in some feeds for media files)
+            if episode_url is None:
+                media_content = item.find('media:content', namespaces)
+                if media_content is not None and 'url' in media_content.attrib and isValidUrl(media_content.attrib['url']):
+                    episode_url = media_content.attrib['url']
+                    # print(f"DEBUG: Found episode URL in media:content for '{title}': {episode_url}")
+
+            # 3. Check for <guid> if it's a permalink (often direct link to episode page or audio)
+            if episode_url is None:
+                guid_tag = item.find('guid')
+                if guid_tag is not None and guid_tag.text and isValidUrl(guid_tag.text):
+                    # Nur verwenden, wenn guid als Permalink gedacht ist (standard oder explizit "true")
+                    if guid_tag.attrib.get('isPermalink', 'true').lower() == 'true':
+                        episode_url = guid_tag.text
+                        # print(f"DEBUG: Found episode URL in guid for '{title}': {episode_url}")
+                
+            # 4. Fallback to item/link. This often points to the episode's webpage, not the audio file.
+            # We'll only use it if no other media URL was found and if it's a valid URL.
+            if episode_url is None:
+                item_link_tag = item.find('link')
+                if item_link_tag is not None and item_link_tag.text and isValidUrl(item_link_tag.text):
+                    episode_url = item_link_tag.text
+                    # print(f"DEBUG: Found episode URL in item/link fallback for '{title}': {episode_url}")
+                else:
+                    print(f"DEBUG: Item link for '{title}' is not a valid URL or missing.")
+
 
             host = None
             itunes_author = item.find('itunes:author', namespaces)
             if itunes_author is not None:
                 host = itunes_author.text
-            elif item.find('author') is not None:
+            elif item.find('author') is not None: # Fallback zu RSS standard author
                 host = item.find('author').text
 
             pub_date = None
             if pub_date_str:
-                try:
-                    pub_date = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M:%S %Z')
-                except ValueError:
+                # Erweiterte Liste von Datumsformaten zum Parsen
+                date_formats = [
+                    '%a, %d %b %Y %H:%M:%S %Z',  # RFC 822 (e.g., Thu, 01 Jan 2020 00:00:00 GMT)
+                    '%a, %d %b %Y %H:%M:%S %z',  # RFC 822 with UTC offset (e.g., Thu, 01 Jan 2020 00:00:00 +0000)
+                    '%Y-%m-%dT%H:%M:%S%z',       # ISO 8601 with offset (e.g., 2020-01-01T00:00:00+00:00)
+                    '%Y-%m-%dT%H:%M:%SZ',        # ISO 8601 with Z for UTC (e.g., 2020-01-01T00:00:00Z)
+                    '%Y-%m-%d %H:%M:%S%z',       # YYYY-MM-DD HH:MM:SS+00:00
+                    '%Y-%m-%d %H:%M:%S',         # YYYY-MM-DD HH:MM:SS (naive)
+                    '%a, %d %b %Y %H:%M:%S %z',  # Another common RFC 822 variant (e.g., Mon, 01 Jan 2024 00:00:00 -0500)
+                    '%d %b %Y %H:%M:%S',         # DD Mon YYYY HH:MM:SS (naive)
+                    '%m/%d/%Y %H:%M:%S',         # MM/DD/YYYY HH:MM:SS (naive)
+                    '%d.%m.%Y %H:%M',            # DD.MM.YYYY HH:MM (naive)
+                    '%Y-%m-%d',                  # Just date (e.g., 2020-01-01)
+                ]
+                for fmt in date_formats:
                     try:
-                        pub_date = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M:%S %z')
+                        pub_date = datetime.strptime(pub_date_str, fmt)
+                        # Für Zeitzonen-agnostische Formate oder solche ohne TZ-Info, UTC annehmen
+                        if pub_date.tzinfo is None:
+                            # Python's datetime.utcnow() returns naive datetime, so tzinfo must be manually handled
+                            # For simplicity, if timezone is missing, we'll keep it naive for DB, unless a TZ is parsed.
+                            pass # pub_date remains naive if not parsed with %z or %Z
+                        break 
                     except ValueError:
-                        try:
-                            # Versuche ein alternatives Format, wenn andere fehlschlagen
-                            pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
-                        except ValueError:
-                            # print(f"Warnung: Datum konnte nicht geparst werden: {pub_date_str}")
-                            pass # Datum bleibt None, wenn Parsen fehlschlägt
-
+                        continue 
+                if pub_date is None:
+                    print(f"Warnung: Datum konnte nicht geparst werden für '{title}': {pub_date_str}")
+                
             if episode_url and isValidUrl(episode_url): # Nur Episoden mit einer gültigen URL hinzufügen
                 episodes_data.append({
                     'title': title,
@@ -192,7 +265,7 @@ def parse_rss_feed(feed_url):
                     'host': host
                 })
             else:
-                print(f"Warnung: Episode {title} ohne gültige URL übersprungen.")
+                print(f"Warnung: Episode '{title}' ohne gültige URL '{episode_url}' übersprungen.")
 
         return episodes_data, homepage_url
     except requests.exceptions.RequestException as e:
@@ -274,21 +347,27 @@ def handle_feeds():
 
         # NEU: Homepage URL extrahieren beim Hinzufügen
         episodes_data, homepage_url = parse_rss_feed(feed_url)
-        if not episodes_data and homepage_url is None: # Wenn RSS-Feed nicht geparst werden kann und keine Homepage-URL gefunden wurde
-            flash(f"Fehler beim Parsen des RSS-Feeds oder keine Daten gefunden: {feed_url}", "danger")
-            return jsonify({"error": f"Fehler beim Parsen des RSS-Feeds oder keine Daten gefunden: {feed_url}"}), 400
+        # NEU: Bedingungen für das Hinzufügen/Aktualisieren eines Feeds gelockert.
+        # Ein Feed wird hinzugefügt, wenn er parsen lässt (episodes_data != None)
+        # ODER eine Homepage-URL gefunden wurde.
+        # Wenn beides None ist (Fehler beim Abrufen/Parsen und keine Homepage), dann ist es ein Fehler.
+        if episodes_data is None and homepage_url is None: 
+            flash(f"Fehler beim Abrufen oder Parsen des RSS-Feeds: {feed_url}", "danger")
+            return jsonify({"error": f"Fehler beim Abrufen oder Parsen des RSS-Feeds: {feed_url}"}), 400
+
 
         # Prüfen, ob Feed bereits existiert
         existing_feed = PodcastFeed.query.filter_by(url=feed_url).first()
         if existing_feed:
             try:
                 # Wenn der Feed bereits existiert, aktualisiere Name, Thema, Aktiv-Status und Homepage URL
-                if name and not existing_feed.name:
+                # Aktualisiere nur, wenn ein neuer Wert vorhanden ist und der alte leer war, oder wenn explizit neue Werte kommen
+                if name and (not existing_feed.name or existing_feed.name != name):
                     existing_feed.name = name
-                if topic and not existing_feed.topic:
+                if topic and (not existing_feed.topic or existing_feed.topic != topic):
                     existing_feed.topic = topic
-                existing_feed.is_active = is_active
-                existing_feed.homepage_url = homepage_url # Homepage URL aktualisieren
+                existing_feed.is_active = is_active # is_active immer aktualisieren
+                existing_feed.homepage_url = homepage_url # Homepage URL aktualisieren, auch wenn None (um alte falsche zu überschreiben)
                 db.session.commit()
                 flash("Feed bereits vorhanden und aktualisiert", "info")
                 return jsonify({"message": "Feed bereits vorhanden und aktualisiert", "id": existing_feed.id, "url": existing_feed.url, "name": existing_feed.name, "topic": existing_feed.topic, "is_active": existing_feed.is_active, "homepage_url": existing_feed.homepage_url}), 200
@@ -297,17 +376,18 @@ def handle_feeds():
                 flash(f"Fehler beim Aktualisieren des bestehenden Feeds: {str(e)}", "danger")
                 return jsonify({"error": f"Fehler beim Aktualisieren des bestehenden Feeds: {str(e)}"}), 500
 
-        new_feed = PodcastFeed(url=feed_url, name=name, topic=topic, is_active=is_active, homepage_url=homepage_url) # Homepage URL speichern
-        db.session.add(new_feed)
-        try:
-            db.session.commit()
-            flash("Feed hinzugefügt", "success")
-            return jsonify({"message": "Feed hinzugefügt", "id": new_feed.id, "url": new_feed.url, "name": new_feed.name, "topic": new_feed.topic, "is_active": new_feed.is_active, "homepage_url": new_feed.homepage_url}), 201
-        except Exception as e:
-            db.session.rollback() 
-            flash(f"Fehler beim Hinzufügen des Feeds: {str(e)}", "danger")
-            print(f"Fehler beim Hinzufügen von Feed {feed_url}: {str(e)}")
-            return jsonify({"error": f"Fehler beim Hinzufügen des Feeds: {str(e)}"}), 500
+        else: # Feed existiert noch nicht, neu hinzufügen
+            new_feed = PodcastFeed(url=feed_url, name=name, topic=topic, is_active=is_active, homepage_url=homepage_url) # Homepage URL speichern
+            db.session.add(new_feed)
+            try:
+                db.session.commit()
+                flash("Feed hinzugefügt", "success")
+                return jsonify({"message": "Feed hinzugefügt", "id": new_feed.id, "url": new_feed.url, "name": new_feed.name, "topic": new_feed.topic, "is_active": new_feed.is_active, "homepage_url": new_feed.homepage_url}), 201
+            except Exception as e:
+                db.session.rollback() 
+                flash(f"Fehler beim Hinzufügen des Feeds: {str(e)}", "danger")
+                print(f"Fehler beim Hinzufügen von Feed {feed_url}: {str(e)}")
+                return jsonify({"error": f"Fehler beim Hinzufügen des Feeds: {str(e)}"}), 500
     
     else: # GET-Anfrage
         # NEU: Sortierung nach Thema und dann nach Name
@@ -399,9 +479,11 @@ def import_feeds_xlsx():
             continue
 
         episodes_data_from_rss, homepage_url = parse_rss_feed(feed_url)
-        if not episodes_data_from_rss and homepage_url is None: # Wenn RSS-Feed nicht geparst werden kann und keine Homepage-URL gefunden wurde
-            errors.append(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url} - Keine Episoden oder Homepage gefunden.")
-            flash(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url} - Keine Episoden oder Homepage gefunden.", "danger")
+        # Auch hier: Lockere die Bedingung. Add/update Feed auch, wenn keine Episoden gefunden wurden,
+        # aber Homepage_url gefunden wurde, oder wenn es ein Problem beim Parsen gab, aber der Feed selbst ok ist.
+        if episodes_data_from_rss is None and homepage_url is None: 
+            errors.append(f"Fehler beim Abrufen/Parsen des RSS-Feeds (Import): {feed_url}")
+            flash(f"Fehler beim Abrufen/Parsen des RSS-Feeds (Import): {feed_url}", "danger")
             continue
 
 
@@ -409,11 +491,12 @@ def import_feeds_xlsx():
 
         if existing_feed:
             try:
-                if feed_name and not existing_feed.name: 
-                    existing_feed.name = name
-                if topic and not existing_feed.topic: 
-                    existing_feed.topic = topic
-                existing_feed.is_active = is_active
+                # Korrektur der Zuweisung: feed_name anstatt name, feed_topic anstatt topic
+                if feed_name and (not existing_feed.name or existing_feed.name != feed_name): 
+                    existing_feed.name = feed_name
+                if feed_topic and (not existing_feed.topic or existing_feed.topic != feed_topic): 
+                    existing_feed.topic = feed_topic
+                existing_feed.is_active = feed_is_active
                 existing_feed.homepage_url = homepage_url
                 db.session.commit()
                 updated_count += 1

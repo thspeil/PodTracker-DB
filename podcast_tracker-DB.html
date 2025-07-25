@@ -467,9 +467,6 @@
 
         .feed-header-col {
             padding: 0 5px; /* Consistent padding */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             display: flex;
             align-items: center; /* Vertically align text */
         }
@@ -479,12 +476,18 @@
         .feed-item .feed-checkbox-container {
             flex: 0 0 40px; /* Stricter fixed width */
             justify-content: center; /* Center the checkbox/label */
+            min-width: 40px; /* Ensure it really doesn't shrink */
+            max-width: 40px; /* Ensure it really doesn't grow */
         }
 
         .feed-header-col.header-podcast-name,
         .feed-podcast-name {
             flex: 0 0 250px; /* Increased to give more room */
             padding-right: 5px; /* Add small buffer */
+            overflow: hidden; /* Sicherstellen, dass Text abgeschnitten wird */
+            text-overflow: ellipsis; /* ...anzeigen */
+            white-space: nowrap; /* Nicht umbrechen */
+            min-width: 150px; /* Mindestbreite, damit es nicht zu klein wird */
         }
 
         .feed-header-col.header-rss-url,
@@ -492,19 +495,27 @@
             flex: 1 1 0%; /* Allow it to grow/shrink based on remaining space */
             min-width: 180px; /* Ensure it doesn't get too small */
             padding-right: 5px; /* Add small buffer */
+            overflow: hidden; /* Sicherstellen, dass Text abgeschnitten wird */
+            text-overflow: ellipsis; /* ...anzeigen */
+            white-space: nowrap; /* Nicht umbrechen */
         }
         
         .feed-header-col.header-topic,
         .feed-topic {
             flex: 0 0 150px; /* Stricter fixed width */
             padding: 4px 8px; /* Maintain padding for editable area */
+            overflow: hidden; /* Sicherstellen, dass Text abgeschnitten wird */
+            text-overflow: ellipsis; /* ...anzeigen */
+            white-space: nowrap; /* Nicht umbrechen */
+            min-width: 100px; /* Mindestbreite */
         }
         
         .feed-header-col.header-remove,
         .remove-feed {
             flex: 0 0 80px; /* Stricter fixed width */
             justify-content: center; /* Center the remove button/label */
-            /* Tailwind classes applied directly in HTML for the button */
+            min-width: 80px; /* Mindestbreite */
+            max-width: 80px; /* Max-Breite */
         }
 
         .feed-item {
@@ -882,7 +893,8 @@
                     <tr>
                         <td colspan="5" class="empty-state">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3
+                                    3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
                             </svg>
                             <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
                             <p>Fügen Sie RSS-Feed-URLs hinzu, um Podcast-Episoden zu verfolgen</p>
@@ -1219,7 +1231,7 @@
                 // Homepage URL für den Podcast-Namen Link
                 const podcastNameLink = feed.homepage_url 
                     ? `<a href="${feed.homepage_url}" target="_blank" class="text-blue-600 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>`
-                    : highlightText(podcastName, currentSearchTerm);
+                    : highlightText(podcastName, currentSearchTerm); // Kein Link, wenn keine Homepage_url
 
                 return `
                     <div class="feed-item">
@@ -1520,8 +1532,9 @@
                     <tr>
                         <td colspan="5" class="empty-state">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                        </svg>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3
+                                    3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                            </svg>
                             <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
                             <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
                         </td>
@@ -1538,7 +1551,7 @@
             
             // Podcast-Name Link zur Homepage
             const podcastNameLink = feed && feed.homepage_url 
-                ? `<a href="${feed.homepage_url}" target="_blank" class="text-blue-600 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>`
+                ? `<a href="${feed.homepage_url}" target="_blank" class="text-blue-600 hover:underline font-bold">${highlightText(podcastName, currentSearchTerm)}</a>`
                 : highlightText(podcastName, currentSearchTerm); // Kein Link, wenn keine Homepage_url
 
             return `
@@ -1707,7 +1720,7 @@
                 const response = await fetchData('/import_feeds_xlsx', 'POST', feedsToImport);
 
                 if (response && response.message) {
-                    // showStatus wird vom Backend-Flash ausgelöst
+                    // showStatus wird vom Backend-flash ausgelöst
                     await loadDataFromBackend(); 
                 } else {
                     // Fehler wird bereits in fetchData oder vom Backend (flash) angezeigt
