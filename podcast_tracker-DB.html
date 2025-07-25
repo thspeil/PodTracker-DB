@@ -398,17 +398,20 @@
 
         .feed-header-col.header-rss-url,
         .feed-url {
-            flex-grow: 1; 
+            /* KORRIGIERT: flex-grow reduziert, min-width angepasst */
+            flex-grow: 0; 
+            flex-basis: 350px; /* Feste Breite oder flex-basis für bessere Kontrolle */
             margin-right: 10px; 
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            min-width: 150px; 
+            min-width: 250px; /* Mindestbreite um Inhalt zu zeigen */
         }
         
         .feed-header-col.header-topic,
         .feed-topic { 
-            flex-basis: 150px; 
+            /* KORRIGIERT: flex-basis angepasst */
+            flex-basis: 180px; /* Etwas mehr Platz für Thema */
             flex-shrink: 0;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -699,13 +702,13 @@
         <div class="flex justify-between items-center mb-10">
             <h1 class="text-5xl">🎧 Podcast Episode Tracker</h1>
             {% if current_user.is_authenticated %}
+                <span class="ml-4 text-gray-700 font-bold">Hallo, {{ current_user.username }}</span> <!-- Korrektur des Usernamens und fett -->
                 <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center group" title="Abmelden">
                     <svg class="w-5 h-5 mr-2 text-gray-600 group-hover:text-gray-800 transition duration-150 ease-in-out" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1"></path>
                     </svg>
                     Abmelden
                 </a>
-                <span class="ml-4 text-gray-700">Hallo, {{ current_user.username }}</span> <!-- Korrektur des Usernamens -->
             {% endif %}
         </div>
         
@@ -738,9 +741,9 @@
                     <label for="countFilter">Anzahl:</label>
                     <select id="countFilter" onchange="applyFilters()">
                         <option value="all">Alle</option>
-                        <option value="10" selected>Letzte 10</option> <!-- Standardwert belegt -->
+                        <option value="10">Letzte 10</option>
                         <option value="20">Letzte 20</option>
-                        <option value="30">Letzte 30</option>
+                        <option value="30" selected>Letzte 30</option> <!-- Standardwert auf 30 gesetzt -->
                         <option value="50">Letzte 50</option>
                         <option value="100">Letzte 100</option>
                     </select>
@@ -1130,7 +1133,8 @@
         const newActiveStatus = checkboxElement.checked; 
         
         showStatus('Aktualisiere Aktiv-Status...', 'loading');
-        const response = await fetchData(`/update_feed/${feedId}`, 'POST', { is_active: newActiveStatus }); // Changed to POST method to match backend route
+        // KORRIGIERT: Methode zu 'PUT' geändert, da das Backend `/feeds/<int:feed_id>` mit PUT erwartet
+        const response = await fetchData(`/feeds/${feedId}`, 'PUT', { is_active: newActiveStatus }); 
 
         if (response) {
             feed.is_active = newActiveStatus; 
@@ -1144,7 +1148,8 @@
 
     async function refreshFeedEpisodes(feedId) {
         showStatus('Aktualisiere Episoden...', 'loading');
-        const response = await fetchData(`/update_feed/${feedId}`, 'POST'); // Changed to POST method to match backend route
+        // KORRIGIERT: Endpoint auf `/feeds/:id/refresh_episodes` und Methode POST geändert
+        const response = await fetchData(`/feeds/${feedId}/refresh_episodes`, 'POST'); 
         if (response && response.message) {
             showStatus(response.message, 'success');
         } else if (response && response.error) {
@@ -1302,6 +1307,7 @@
             const newValue = input.value.trim();
             if (newValue !== currentValue) {
                 showStatus('Aktualisiere Thema...', 'loading');
+                // KORRIGIERT: Endpoint auf `/feeds/:id` und Methode PUT geändert
                 fetchData(`/feeds/${feedId}`, 'PUT', { topic: newValue }) 
                     .then(response => {
                         if (response) {
@@ -1311,6 +1317,9 @@
                             showStatus(`Fehler beim Aktualisieren des Themas.`, 'danger');
                         }
                     });
+            } else {
+                // If value is the same, just revert UI and show info
+                showStatus('Thema unverändert.', 'info');
             }
             element.textContent = newValue || 'Klicken zum Bearbeiten'; 
             element.classList.remove('editing');
@@ -1331,6 +1340,7 @@
         const newFavoriteStatus = !episode.is_favorite;
         
         showStatus('Aktualisiere Favoritenstatus...', 'loading');
+        // KORRIGIERT: Endpoint auf `/episodes/:id` und Methode PUT geändert
         const response = await fetchData(`/episodes/${episode.id}`, 'PUT', { is_favorite: newFavoriteStatus }); 
 
         if (response) {
@@ -1417,7 +1427,7 @@
         
         const activeFeeds = allFeeds.filter(feed => feed.is_active);
         // Promise.allSettled verwenden, um auch bei Fehlern einzelner Feeds fortzufahren
-        const results = await Promise.allSettled(activeFeeds.map(feed => fetchData(`/update_feed/${feed.id}`, 'POST'))); 
+        const results = await Promise.allSettled(activeFeeds.map(feed => fetchData(`/feeds/${feed.id}/refresh_episodes`, 'POST'))); 
         
         let successCount = 0;
         let errorCount = 0;
