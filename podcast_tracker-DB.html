@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podcast Episode Tracker</title>
     <!-- Favicon hinzufügen -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico"> <!-- Korrigierter Pfad -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico"> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Tailwind CSS CDN für einfaches Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -422,12 +422,13 @@
             min-width: 100px; /* Mindestbreite für das Thema */
         }
         
-        .feed-header-col.header-remove {
-            flex: 0 0 80px; /* Feste Breite für den Header */
-            text-align: right; /* Rechtsbündig ausrichten */
+        .feed-header-col.header-actions { /* NEU: Für Aktualisieren und Entfernen */
+            flex: 0 0 160px; /* Breite für beide Buttons */
             display: flex;
-            justify-content: flex-end; /* Inhalt am Ende ausrichten */
+            justify-content: flex-end; /* Rechtsbündig */
             align-items: center;
+            gap: 8px; /* Abstand zwischen den Buttons */
+            padding-right: 5px; /* Etwas Innenabstand */
         }
 
         .feed-item {
@@ -447,11 +448,16 @@
         .remove-feed {
             padding: 3px 6px;
             font-size: 13px;
-            flex-shrink: 0; /* Nicht schrumpfen lassen */
-            /* KORRIGIERT: flex-basis und margin-left für Rechtsausrichtung im Item */
-            flex-basis: 80px; 
-            margin-left: auto; /* Schiebt den Button nach rechts */
+            flex-shrink: 0; 
             @apply bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-150 ease-in-out;
+        }
+
+        /* Styling für den "Aktualisieren"-Button im Feed-Item */
+        .update-single-feed { /* NEU */
+            padding: 3px 6px;
+            font-size: 13px;
+            flex-shrink: 0;
+            @apply bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-150 ease-in-out;
         }
 
 
@@ -708,19 +714,21 @@
             <h1 class="text-5xl">🎧 Podcast Episode Tracker</h1>
             {% if current_user.is_authenticated %}
                 <!-- Reihenfolge getauscht und Hallo-Text fett -->
-                <span class="ml-4 text-gray-700 font-bold">Hallo, {{ current_user.username }}</span> 
-                <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center group" title="Abmelden">
-                    <svg class="w-5 h-5 mr-2 text-gray-600 group-hover:text-gray-800 transition duration-150 ease-in-out" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1"></path>
-                    </svg>
-                    Abmelden
-                </a>
+                <div class="flex items-center gap-4"> <!-- Added flex container for alignment -->
+                    <span class="ml-4 text-gray-700 font-bold">Hallo, {{ current_user.username }}</span> 
+                    <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center group" title="Abmelden">
+                        <svg class="w-5 h-5 mr-2 text-gray-600 group-hover:text-gray-800 transition duration-150 ease-in-out" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1"></path>
+                        </svg>
+                        Abmelden
+                    </a>
+                </div>
             {% endif %}
         </div>
         
         <div class="controls">
             <div class="input-group">
-                <input type="url" id="rssUrl" placeholder="RSS Feed URL eingeben (z.z. https://example.com/feed.xml)">
+                <input type="url" id="rssUrl" placeholder="RSS Feed URL eingeben (z.B. https://example.com/feed.xml)">
                 <!-- Button mit Tailwind-Klassen -->
                 <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="addFeed()">Feed hinzufügen</button>
             </div>
@@ -1077,7 +1085,7 @@
                     <div class="feed-header-col header-podcast-name">Podcast-Name</div>
                     <div class="feed-header-col header-rss-url">RSS-Adresse</div>
                     <div class="feed-header-col header-topic">Thema</div>
-                    <div class="feed-header-col header-remove"></div>
+                    <div class="feed-header-col header-actions">Aktionen</div> <!-- Geänderter Header -->
                 </div>
             `;
 
@@ -1097,484 +1105,494 @@
                                    ${isChecked ? 'checked' : ''} 
                                    onclick="toggleFeedActiveStatus(${feed.id}, this)">
                         </div>
-                    <div class="feed-podcast-name" title="${podcastName}">${podcastLinkHtml}</div>
-                    <div class="feed-url" title="${feed.url}">${feed.url}</div>
-                    <span class="editable feed-topic" onclick="makeEditableFeedTopic(this, ${feed.id})">${highlightText(feedTopic, currentSearchTerm)}</span>
-                    <button class="remove-feed" onclick="removeFeed(${feed.id})">Entfernen</button>
-                </div>
-            `;
-        }).join('');
+                        <div class="feed-podcast-name" title="${podcastName}">${podcastLinkHtml}</div>
+                        <div class="feed-url" title="${feed.url}">${feed.url}</div>
+                        <span class="editable feed-topic" onclick="makeEditableFeedTopic(this, ${feed.id})">${highlightText(feedTopic, currentSearchTerm)}</span>
+                        <div class="flex items-center gap-2"> <!-- Container for buttons -->
+                            <button class="update-single-feed" onclick="refreshFeedEpisodes(${feed.id})">Aktualisieren</button> <!-- Hinzugefügter Button -->
+                            <button class="remove-feed" onclick="removeFeed(${feed.id})">Entfernen</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
-        feedsContent.innerHTML = feedsHtml;
+            feedsContent.innerHTML = feedsHtml;
 
-        if (!feedsCollapsed) {
-            feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+            if (!feedsCollapsed) {
+                feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+            }
         }
-    }
 
-    function toggleFeedsList() {
-        const feedsContent = document.getElementById('feedsContent');
-        const feedsToggle = document.getElementById('feedsToggle');
-        
-        feedsCollapsed = !feedsCollapsed;
-        
-        if (feedsCollapsed) {
-            feedsContent.style.maxHeight = '0';
-            feedsToggle.textContent = '►';
-            feedsToggle.classList.add('collapsed');
-        } else {
-            feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
-            feedsToggle.textContent = '▼';
-            feedsToggle.classList.remove('collapsed');
-        }
-    }
-
-    async function toggleFeedActiveStatus(feedId, checkboxElement) {
-        const feed = allFeeds.find(f => f.id === feedId);
-        if (!feed) return;
-
-        const newActiveStatus = checkboxElement.checked; 
-        
-        showStatus('Aktualisiere Aktiv-Status...', 'loading');
-        // KORREKTUR: Endpoint /feeds/:id mit PUT für Statusänderung
-        const response = await fetchData(`/feeds/${feedId}`, 'PUT', { is_active: newActiveStatus });
-
-        if (response) {
-            feed.is_active = newActiveStatus; 
-            showStatus(`Feed-Status aktualisiert: ${newActiveStatus ? 'Aktiv' : 'Inaktiv'}`, 'success');
-            applyFilters(); 
-        } else { // NEU: Fehlerbehandlung
-            checkboxElement.checked = !newActiveStatus; // Status im UI zurücksetzen
-            showStatus(`Fehler beim Aktualisieren des Feed-Status.`, 'danger');
-        }
-    }
-
-    async function refreshFeedEpisodes(feedId) {
-        showStatus('Aktualisiere Episoden...', 'loading');
-        // KORREKTUR: Endpoint /feeds/:id/refresh_episodes mit POST
-        const response = await fetchData(`/feeds/${feedId}/refresh_episodes`, 'POST');
-        if (response && response.message) {
-            showStatus(response.message, 'success');
-        } else if (response && response.error) {
-            showStatus(`Fehler beim Aktualisieren der Episoden: ${response.error}`, 'danger');
-        } else {
-            showStatus('Unbekannter Fehler beim Aktualisieren der Episoden', 'danger');
-        }
-    }
-
-    function formatDate(dateString) {
-        if (!dateString) return 'Unbekannt';
-        
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'Unbekannt';
+        function toggleFeedsList() {
+            const feedsContent = document.getElementById('feedsContent');
+            const feedsToggle = document.getElementById('feedsToggle');
             
-            return date.toLocaleDateString('de-DE', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
+            feedsCollapsed = !feedsCollapsed;
+            
+            if (feedsCollapsed) {
+                feedsContent.style.maxHeight = '0';
+                feedsToggle.textContent = '►';
+                feedsToggle.classList.add('collapsed');
+            } else {
+                feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+                feedsToggle.textContent = '▼';
+                feedsToggle.classList.remove('collapsed');
+            }
+        }
+
+        async function toggleFeedActiveStatus(feedId, checkboxElement) {
+            const feed = allFeeds.find(f => f.id === feedId);
+            if (!feed) return;
+
+            const newActiveStatus = checkboxElement.checked; 
+            
+            showStatus('Aktualisiere Aktiv-Status...', 'loading');
+            // KORREKTUR: Endpoint /feeds/:id mit PUT für Statusänderung
+            const response = await fetchData(`/feeds/${feedId}`, 'PUT', { is_active: newActiveStatus });
+
+            if (response) {
+                feed.is_active = newActiveStatus; 
+                showStatus(`Feed-Status aktualisiert: ${newActiveStatus ? 'Aktiv' : 'Inaktiv'}`, 'success');
+                applyFilters(); 
+            } else { // NEU: Fehlerbehandlung
+                checkboxElement.checked = !newActiveStatus; // Status im UI zurücksetzen
+                showStatus(`Fehler beim Aktualisieren des Feed-Status.`, 'danger');
+            }
+        }
+
+        async function refreshFeedEpisodes(feedId) {
+            showStatus('Aktualisiere Episoden...', 'loading');
+            // KORREKTUR: Endpoint /feeds/:id/refresh_episodes mit POST
+            const response = await fetchData(`/feeds/${feedId}/refresh_episodes`, 'POST');
+            if (response && response.message) {
+                showStatus(response.message, 'success');
+                await loadDataFromBackend(); // Wichtig: Daten neu laden nach Aktualisierung
+            } else if (response && response.error) {
+                showStatus(`Fehler beim Aktualisieren der Episoden: ${response.error}`, 'danger');
+            } else {
+                showStatus('Unbekannter Fehler beim Aktualisieren der Episoden', 'danger');
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unbekannt';
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'Unbekannt';
+                
+                return date.toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+            } catch (error) {
+                return 'Unbekannt';
+            }
+        }
+
+        function highlightText(text, searchTerm) {
+            if (!searchTerm) return text;
+            
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function searchEpisodes(searchTerm, episodes) {
+            if (!searchTerm) {
+                return [...episodes];
+            }
+
+            const term = searchTerm.toLowerCase();
+            return episodes.filter(episode => {
+                const feed = allFeeds.find(f => f.id === episode.feed_id);
+                const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
+                const topic = feed ? feed.topic : '';
+
+                return podcastName.toLowerCase().includes(term) ||
+                    episode.title.toLowerCase().includes(term) ||
+                    episode.description.toLowerCase().includes(term) ||
+                    topic.toLowerCase().includes(term) ||
+                    (episode.host && episode.host.toLowerCase().includes(term)); 
             });
-        } catch (error) {
-            return 'Unbekannt';
-        }
-    }
-
-    function highlightText(text, searchTerm) {
-        if (!searchTerm) return text;
-        
-        const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        return text.replace(regex, '<span class="highlight">$1</span>');
-    }
-
-    function searchEpisodes(searchTerm, episodes) {
-        if (!searchTerm) {
-            return [...episodes];
         }
 
-        const term = searchTerm.toLowerCase();
-        return episodes.filter(episode => {
-            const feed = allFeeds.find(f => f.id === episode.feed_id);
-            const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
-            const topic = feed ? feed.topic : '';
+        function applyTimeFilter(episodes) {
+            const timeFilter = document.getElementById('timeFilter').value;
+            if (timeFilter === 'all') return episodes;
 
-            return podcastName.toLowerCase().includes(term) ||
-                   episode.title.toLowerCase().includes(term) ||
-                   episode.description.toLowerCase().includes(term) ||
-                   topic.toLowerCase().includes(term) ||
-                   (episode.host && episode.host.toLowerCase().includes(term)); 
-        });
-    }
+            const now = new Date();
+            const filterDate = new Date();
 
-    function applyTimeFilter(episodes) {
-        const timeFilter = document.getElementById('timeFilter').value;
-        if (timeFilter === 'all') return episodes;
+            switch (timeFilter) {
+                case 'week':
+                    filterDate.setDate(now.getDate() - 7);
+                    break;
+                case 'month':
+                    filterDate.setMonth(now.getMonth() - 1);
+                    break;
+                case 'quarter':
+                    filterDate.setMonth(now.getMonth() - 3);
+                    break;
+                case 'year':
+                    filterDate.setFullYear(now.getFullYear() - 1);
+                    break;
+            }
 
-        const now = new Date();
-        const filterDate = new Date();
-
-        switch (timeFilter) {
-            case 'week':
-                filterDate.setDate(now.getDate() - 7);
-                break;
-            case 'month':
-                filterDate.setMonth(now.getMonth() - 1);
-                break;
-            case 'quarter':
-                filterDate.setMonth(now.getMonth() - 3);
-                break;
-            case 'year':
-                filterDate.setFullYear(now.getFullYear() - 1);
-                break;
+            return episodes.filter(episode => {
+                const episodeDate = new Date(episode.pub_date); 
+                return episodeDate >= filterDate;
+            });
         }
 
-        return episodes.filter(episode => {
-            const episodeDate = new Date(episode.pub_date); 
-            return episodeDate >= filterDate;
-        });
-    }
+        function applyCountFilter(episodes) {
+            const countFilter = document.getElementById('countFilter').value;
+            if (countFilter === 'all') return episodes;
 
-    function applyCountFilter(episodes) {
-        const countFilter = document.getElementById('countFilter').value;
-        if (countFilter === 'all') return episodes;
-
-        const count = parseInt(countFilter);
-        return episodes.slice(0, count);
-    }
-
-    function applyFilters() {
-        const searchInput = document.getElementById('searchInput');
-        currentSearchTerm = searchInput.value.trim();
-        
-        let episodes = [...allEpisodes];
-        
-        episodes = episodes.filter(episode => {
-            const feed = allFeeds.find(f => f.id === episode.feed_id);
-            return feed && feed.is_active;
-        });
-
-        episodes = searchEpisodes(currentSearchTerm, episodes);
-        
-        episodes = [...episodes].sort((a, b) => {
-            const dateA = new Date(a.pub_date);
-            const dateB = new Date(b.pub_date);
-            return dateB - dateA;
-        });
-        
-        episodes = applyTimeFilter(episodes);
-        
-        episodes = applyCountFilter(episodes);
-        
-        filteredEpisodes = episodes;
-        updateTable();
-        updateSearchStats();
-    }
-
-    function updateSearchStats() {
-        const statsElement = document.getElementById('searchStats');
-        
-        if (currentSearchTerm) {
-            const totalEpisodes = allEpisodes.length;
-            const filteredCount = filteredEpisodes.length;
-            statsElement.textContent = `${filteredCount} von ${totalEpisodes} Episoden gefunden für "${currentSearchTerm}"`;
-            statsElement.classList.add('active');
-        } else {
-            statsElement.classList.remove('active');
+            const count = parseInt(countFilter);
+            return episodes.slice(0, count);
         }
-    }
 
-    function clearSearch() {
-        document.getElementById('searchInput').value = '';
-        currentSearchTerm = '';
-        applyFilters();
-    }
+        function applyFilters() {
+            const searchInput = document.getElementById('searchInput');
+            currentSearchTerm = searchInput.value.trim();
+            
+            let episodes = [...allEpisodes];
+            
+            episodes = episodes.filter(episode => {
+                const feed = allFeeds.find(f => f.id === episode.feed_id);
+                return feed && feed.is_active;
+            });
 
-    async function makeEditableFeedTopic(element, feedId) {
-        const feed = allFeeds.find(f => f.id === feedId);
-        if (!feed) return;
+            episodes = searchEpisodes(currentSearchTerm, episodes);
+            
+            episodes = [...episodes].sort((a, b) => {
+                const dateA = new Date(a.pub_date);
+                const dateB = new Date(b.pub_date);
+                return dateB - dateA;
+            });
+            
+            episodes = applyTimeFilter(episodes);
+            
+            episodes = applyCountFilter(episodes);
+            
+            filteredEpisodes = episodes;
+            updateTable();
+            updateSearchStats();
+        }
 
-        const currentValue = feed.topic || '';
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = currentValue;
-        input.className = 'editable-input';
-        
-        element.innerHTML = '';
-        element.appendChild(input);
-        element.classList.add('editing');
-        
-        input.focus();
-        input.select();
-        
-        function saveEdit() {
-            const newValue = input.value.trim();
-            if (newValue !== currentValue) {
-                showStatus('Aktualisiere Thema...', 'loading');
-                // KORREKTUR: Endpoint auf `/feeds/:id` und Methode PUT geändert
-                // KORREKTUR: Datenobjekt für PUT-Request klar definieren
-                fetchData(`/feeds/${feedId}`, 'PUT', { topic: newValue }) 
-                    .then(response => {
-                        if (response) {
-                            showStatus('Thema aktualisiert', 'success');
-                            loadDataFromBackend(); 
-                        } else { 
-                            showStatus(`Fehler beim Aktualisieren des Themas.`, 'danger');
+        function updateSearchStats() {
+            const statsElement = document.getElementById('searchStats');
+            
+            if (currentSearchTerm) {
+                const totalEpisodes = allEpisodes.length;
+                const filteredCount = filteredEpisodes.length;
+                statsElement.textContent = `${filteredCount} von ${totalEpisodes} Episoden gefunden für "${currentSearchTerm}"`;
+                statsElement.classList.add('active');
+            } else {
+                statsElement.classList.remove('active');
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            currentSearchTerm = '';
+            applyFilters();
+        }
+
+        async function makeEditableFeedTopic(element, feedId) {
+            const feed = allFeeds.find(f => f.id === feedId);
+            if (!feed) return;
+
+            const currentValue = feed.topic || '';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentValue;
+            input.className = 'editable-input';
+            
+            element.innerHTML = '';
+            element.appendChild(input);
+            element.classList.add('editing');
+            
+            input.focus();
+            input.select();
+            
+            function saveEdit() {
+                const newValue = input.value.trim();
+                if (newValue !== currentValue) {
+                    showStatus('Aktualisiere Thema...', 'loading');
+                    // KORREKTUR: Endpoint auf `/feeds/:id` und Methode PUT geändert
+                    // KORREKTUR: Datenobjekt für PUT-Request klar definieren
+                    fetchData(`/feeds/${feedId}`, 'PUT', { topic: newValue }) 
+                        .then(response => {
+                            if (response) {
+                                showStatus('Thema aktualisiert', 'success');
+                                loadDataFromBackend(); 
+                            } else { 
+                                showStatus(`Fehler beim Aktualisieren des Themas.`, 'danger');
+                            }
+                        });
+                } else {
+                    // If value is the same, just revert UI and show info
+                    showStatus('Thema unverändert.', 'info');
+                }
+                element.textContent = newValue || 'Klicken zum Bearbeiten'; 
+                element.classList.remove('editing');
+            }
+            
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveEdit();
+                }
+            });
+        }
+
+        async function toggleFavorite(episodeId, starElement) {
+            const episode = allEpisodes.find(ep => ep.id === episodeId);
+            if (!episode) return;
+
+            const newFavoriteStatus = !episode.is_favorite;
+            
+            showStatus('Aktualisiere Favoritenstatus...', 'loading');
+            // KORREKTUR: Endpoint auf `/episodes/:id` und Methode PUT geändert
+            const response = await fetchData(`/episodes/${episode.id}`, 'PUT', { is_favorite: newFavoriteStatus }); 
+
+            if (response) {
+                episode.is_favorite = newFavoriteStatus;
+                
+                if (newFavoriteStatus) {
+                    starElement.textContent = '⭐';
+                    starElement.className = 'favorite-star active';
+                } else {
+                    starElement.textContent = '☆';
+                    starElement.className = 'favorite-star inactive';
+                }
+                showStatus('Favoritenstatus aktualisiert', 'success');
+            } else {
+                // Revert UI if API call failed
+                starElement.textContent = episode.is_favorite ? '⭐' : '☆';
+                starElement.className = `favorite-star ${episode.is_favorite ? 'active' : 'inactive'}`;
+                showStatus(`Fehler beim Aktualisieren des Favoritenstatus.`, 'danger'); 
+            }
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('episodeTableBody');
+            
+            if (filteredEpisodes.length === 0) {
+                if (currentSearchTerm) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="no-results">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <h3>Keine Ergebnisse gefunden</h3>
+                                <p>Keine Episoden entsprechen den Suchkriterien "${currentSearchTerm}"</p>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                            </svg>
+                                <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
+                                <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
+                            </td>
+                        </tr>
+                    `;
+                }
+                return;
+            }
+
+            tbody.innerHTML = filteredEpisodes.map(episode => {
+                const feed = allFeeds.find(f => f.id === episode.feed_id);
+                // Use episode.podcast_name from backend, fallback to feed.name or feed.url
+                const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
+                const host = episode.host || 'N/A'; 
+                
+                // Episode Title linking
+                const episodeTitleLinkHtml = episode.url ?
+                    `<a href="${episode.url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${highlightText(episode.title, currentSearchTerm)}</a>` :
+                    `${highlightText(episode.title, currentSearchTerm)}`;
+
+                // KORREKTUR: Podcast-Name in der Tabelle verlinken und fett
+                const podcastNameLinkHtml = (feed && feed.homepage_url) ?
+                    `<a href="${feed.homepage_url}" target="_blank" rel="noopener noreferrer" class="font-bold text-gray-900 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>` :
+                    `<span class="font-bold text-gray-900">${highlightText(podcastName, currentSearchTerm)}</span>`;
+
+
+                return `
+                    <tr>
+                        <td class="podcast-name" title="${podcastName}">${podcastNameLinkHtml}</td>
+                        <td class="episode-title" title="${episode.title}">${episodeTitleLinkHtml}</td>
+                        <td class="date">${formatDate(episode.pub_date)}</td>
+                        <td class="host" title="${host}">${highlightText(host, currentSearchTerm)}</td>
+                        <td>
+                            <span class="favorite-star ${episode.is_favorite ? 'active' : 'inactive'}" 
+                                onclick="toggleFavorite(${episode.id}, this)">
+                                ${episode.is_favorite ? '⭐' : '☆'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function refreshAll() {
+            showStatus('Aktualisiere alle aktiven Feeds...', 'loading');
+            
+            const activeFeeds = allFeeds.filter(feed => feed.is_active);
+            // Promise.allSettled verwenden, um auch bei Fehlern einzelner Feeds fortzufahren
+            // KORREKTUR: Endpoints auf `/feeds/:id/refresh_episodes` mit POST
+            const results = await Promise.allSettled(activeFeeds.map(feed => fetchData(`/feeds/${feed.id}/refresh_episodes`, 'POST'))); 
+            
+            let successCount = 0;
+            let errorCount = 0;
+            results.forEach(result => {
+                if (result.status === 'fulfilled' && result.value && result.value.message) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                    console.error("Fehler beim Aktualisieren eines Feeds:", result.reason || result.value);
+                }
+            });
+
+            await loadDataFromBackend(); 
+            if (errorCount === 0) {
+                showStatus(`Alle ${successCount} aktiven Feeds erfolgreich aktualisiert`, 'success');
+            } else {
+                showStatus(`${successCount} Feeds aktualisiert, ${errorCount} Fehler aufgetreten.`, 'warning');
+            }
+        }
+
+        function exportToXLSX() {
+            if (filteredEpisodes.length === 0) {
+                showStatus('Keine Episoden zum Exportieren vorhanden', 'warning');
+                return;
+            }
+
+            const episodesToExport = filteredEpisodes;
+            
+            const exportData = episodesToExport.map(episode => {
+                const feed = allFeeds.find(f => f.id === episode.feed_id);
+                const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
+                const feedTopic = feed ? feed.topic : '';
+                const host = episode.host || 'N/A'; 
+
+                return {
+                    'Podcast-Name': podcastName, 
+                    'Episode': episode.title,
+                    'Datum': formatDate(episode.pub_date),
+                    'Host': host,
+                    'Thema': feedTopic,
+                    'Favorit': episode.is_favorite ? 'Ja' : 'Nein'
+                };
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            const colWidths = [
+                { wch: 32 }, // Podcast-Name
+                { wch: 50 }, // Episode
+                { wch: 12 }, // Datum
+                { wch: 20 }, // Host
+                { wch: 30 }, // Thema
+                { wch: 10 }  // Favorit
+            ];
+            ws['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Podcast Episodes');
+            
+            const fileName = `podcast_episodes_${new Date().toISOString().split('T')[0]}.xlsx`;
+            
+            XLSX.writeFile(wb, fileName);
+
+            showStatus(`${episodesToExport.length} Episoden als XLSX exportiert`, 'success');
+        }
+
+        async function importFeedsFromXLSX(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                showStatus('Keine Datei ausgewählt.', 'error');
+                return;
+            }
+
+            showStatus('Importiere Feeds aus XLSX...', 'loading');
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    // NEU: header: 1, um die erste Zeile als Header zu verwenden
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+
+                    // NEU: Annahme, dass die erste Zeile die Header sind
+                    const headers = json[0];
+                    const rows = json.slice(1); // Die eigentlichen Datenzeilen
+
+                    const feedsToImport = [];
+                    rows.forEach(rowArray => {
+                        const row = {};
+                        headers.forEach((header, index) => {
+                            row[header] = rowArray[index];
+                        });
+
+                        // Sicherstellen, dass die Spaltennamen korrekt sind und die Daten sauber extrahiert werden
+                        // Zugriff über die tatsächlichen Spaltennamen aus der XLSX-Datei
+                        const rssUrl = row['RSS-Adresse']; 
+                        const podcastName = row['Podcast-Name'] || null; 
+                        const podcastTopic = row['Thema'] || null; 
+                        // Konvertierung von 'aktiv' Spalte: Excel kann TRUE/FALSE oder 1/0 zurückgeben
+                        // Oder ein leerer String, wenn die Zelle leer ist.
+                        const isActive = (row['aktiv'] === true || String(row['aktiv']).toUpperCase() === 'TRUE' || row['aktiv'] === 1); 
+
+                        if (rssUrl && isValidUrl(rssUrl)) {
+                            feedsToImport.push({
+                                url: rssUrl,
+                                name: podcastName,
+                                topic: podcastTopic,
+                                is_active: isActive 
+                            });
+                        } else {
+                            console.warn('Ungültige RSS-Adresse in XLSX übersprungen:', rssUrl);
                         }
                     });
-            } else {
-                // If value is the same, just revert UI and show info
-                showStatus('Thema unverändert.', 'info');
-            }
-            element.textContent = newValue || 'Klicken zum Bearbeiten'; 
-            element.classList.remove('editing');
-        }
-        
-        input.addEventListener('blur', saveEdit);
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                saveEdit();
-            }
-        });
-    }
 
-    async function toggleFavorite(episodeId, starElement) {
-        const episode = allEpisodes.find(ep => ep.id === episodeId);
-        if (!episode) return;
+                    if (feedsToImport.length === 0) {
+                        showStatus('Keine gültigen Feeds in der XLSX-Datei gefunden.', 'error');
+                        return;
+                    }
 
-        const newFavoriteStatus = !episode.is_favorite;
-        
-        showStatus('Aktualisiere Favoritenstatus...', 'loading');
-        // KORREKTUR: Endpoint auf `/episodes/:id` und Methode PUT geändert
-        const response = await fetchData(`/episodes/${episode.id}`, 'PUT', { is_favorite: newFavoriteStatus }); 
+                    // KORREKTUR: Endpoint zu `/import_feeds_xlsx` geändert
+                    const response = await fetchData('/import_feeds_xlsx', 'POST', feedsToImport);
 
-        if (response) {
-            episode.is_favorite = newFavoriteStatus;
-            
-            if (newFavoriteStatus) {
-                starElement.textContent = '⭐';
-                starElement.className = 'favorite-star active';
-            } else {
-                starElement.textContent = '☆';
-                starElement.className = 'favorite-star inactive';
-            }
-            showStatus('Favoritenstatus aktualisiert', 'success');
-        } else {
-            // Revert UI if API call failed
-            starElement.textContent = episode.is_favorite ? '⭐' : '☆';
-            starElement.className = `favorite-star ${episode.is_favorite ? 'active' : 'inactive'}`;
-            showStatus(`Fehler beim Aktualisieren des Favoritenstatus.`, 'danger'); 
-        }
-    }
-
-    function updateTable() {
-        const tbody = document.getElementById('episodeTableBody');
-        
-        if (filteredEpisodes.length === 0) {
-            if (currentSearchTerm) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="no-results">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <h3>Keine Ergebnisse gefunden</h3>
-                            <p>Keine Episoden entsprechen den Suchkriterien "${currentSearchTerm}"</p>
-                        </td>
-                    </tr>
-                `;
-            } else {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="empty-state">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                        </svg>
-                            <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
-                            <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
-                        </td>
-                    </tr>
-                `;
-            }
-            return;
-        }
-
-        tbody.innerHTML = filteredEpisodes.map(episode => {
-            const feed = allFeeds.find(f => f.id === episode.feed_id);
-            // Use episode.podcast_name from backend, fallback to feed.name or feed.url
-            const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
-            const host = episode.host || 'N/A'; 
-            
-            // Episode Title linking
-            const episodeTitleLinkHtml = episode.url ?
-                `<a href="${episode.url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${highlightText(episode.title, currentSearchTerm)}</a>` :
-                `${highlightText(episode.title, currentSearchTerm)}`;
-
-            return `
-                <tr>
-                    <td class="podcast-name" title="${podcastName}">${highlightText(podcastName, currentSearchTerm)}</td>
-                    <td class="episode-title" title="${episode.title}">${episodeTitleLinkHtml}</td>
-                    <td class="date">${formatDate(episode.pub_date)}</td>
-                    <td class="host" title="${host}">${highlightText(host, currentSearchTerm)}</td>
-                    <td>
-                        <span class="favorite-star ${episode.is_favorite ? 'active' : 'inactive'}" 
-                              onclick="toggleFavorite(${episode.id}, this)">
-                            ${episode.is_favorite ? '⭐' : '☆'}
-                        </span>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    async function refreshAll() {
-        showStatus('Aktualisiere alle aktiven Feeds...', 'loading');
-        
-        const activeFeeds = allFeeds.filter(feed => feed.is_active);
-        // Promise.allSettled verwenden, um auch bei Fehlern einzelner Feeds fortzufahren
-        // KORREKTUR: Endpoints auf `/feeds/:id/refresh_episodes` mit POST
-        const results = await Promise.allSettled(activeFeeds.map(feed => fetchData(`/feeds/${feed.id}/refresh_episodes`, 'POST'))); 
-        
-        let successCount = 0;
-        let errorCount = 0;
-        results.forEach(result => {
-            if (result.status === 'fulfilled' && result.value && result.value.message) {
-                successCount++;
-            } else {
-                errorCount++;
-                console.error("Fehler beim Aktualisieren eines Feeds:", result.reason || result.value);
-            }
-        });
-
-        await loadDataFromBackend(); 
-        if (errorCount === 0) {
-            showStatus(`Alle ${successCount} aktiven Feeds erfolgreich aktualisiert`, 'success');
-        } else {
-            showStatus(`${successCount} Feeds aktualisiert, ${errorCount} Fehler aufgetreten.`, 'warning');
-        }
-    }
-
-    function exportToXLSX() {
-        if (filteredEpisodes.length === 0) {
-            showStatus('Keine Episoden zum Exportieren vorhanden', 'warning');
-            return;
-        }
-
-        const episodesToExport = filteredEpisodes;
-        
-        const exportData = episodesToExport.map(episode => {
-            const feed = allFeeds.find(f => f.id === episode.feed_id);
-            const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
-            const feedTopic = feed ? feed.topic : '';
-            const host = episode.host || 'N/A'; 
-
-            return {
-                'Podcast-Name': podcastName, 
-                'Episode': episode.title,
-                'Datum': formatDate(episode.pub_date),
-                'Host': host,
-                'Thema': feedTopic,
-                'Favorit': episode.is_favorite ? 'Ja' : 'Nein'
-            };
-        });
-
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        
-        const colWidths = [
-            { wch: 32 }, // Podcast-Name
-            { wch: 50 }, // Episode
-            { wch: 12 }, // Datum
-            { wch: 20 }, // Host
-            { wch: 30 }, // Thema
-            { wch: 10 }  // Favorit
-        ];
-        ws['!cols'] = colWidths;
-        
-        XLSX.utils.book_append_sheet(wb, ws, 'Podcast Episodes');
-        
-        const fileName = `podcast_episodes_${new Date().toISOString().split('T')[0]}.xlsx`;
-        
-        XLSX.writeFile(wb, fileName);
-
-        showStatus(`${episodesToExport.length} Episoden als XLSX exportiert`, 'success');
-    }
-
-    async function importFeedsFromXLSX(event) {
-        const file = event.target.files[0];
-        if (!file) {
-            showStatus('Keine Datei ausgewählt.', 'error');
-            return;
-        }
-
-        showStatus('Importiere Feeds aus XLSX...', 'loading');
-
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                // NEU: header: 1, um die erste Zeile als Header zu verwenden
-                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
-
-                // NEU: Annahme, dass die erste Zeile die Header sind
-                const headers = json[0];
-                const rows = json.slice(1); // Die eigentlichen Datenzeilen
-
-                const feedsToImport = [];
-                rows.forEach(rowArray => {
-                    const row = {};
-                    headers.forEach((header, index) => {
-                        row[header] = rowArray[index];
-                    });
-
-                    // Sicherstellen, dass die Spaltennamen korrekt sind und die Daten sauber extrahiert werden
-                    // Zugriff über die tatsächlichen Spaltennamen aus der XLSX-Datei
-                    const rssUrl = row['RSS-Adresse']; 
-                    const podcastName = row['Podcast-Name'] || null; 
-                    const podcastTopic = row['Thema'] || null; 
-                    // Konvertierung von 'aktiv' Spalte: Excel kann TRUE/FALSE oder 1/0 zurückgeben
-                    // Oder ein leerer String, wenn die Zelle leer ist.
-                    const isActive = (row['aktiv'] === true || String(row['aktiv']).toUpperCase() === 'TRUE' || row['aktiv'] === 1); 
-
-                    if (rssUrl && isValidUrl(rssUrl)) {
-                        feedsToImport.push({
-                            url: rssUrl,
-                            name: podcastName,
-                            topic: podcastTopic,
-                            is_active: isActive 
-                        });
+                    if (response && response.message) {
+                        showStatus(response.message, 'success');
+                        await loadDataFromBackend(); 
                     } else {
-                        console.warn('Ungültige RSS-Adresse in XLSX übersprungen:', rssUrl);
+                        // NEU: Zeige detailliertere Fehlermeldungen vom Backend
+                        showStatus(`Fehler beim Importieren der XLSX-Feeds: ${response.error || 'Unbekannter Fehler'}`, 'error');
+                        if (response && response.errors) {
+                            response.errors.forEach(err => console.error("Import Fehler:", err));
+                        }
                     }
-                });
 
-                if (feedsToImport.length === 0) {
-                    showStatus('Keine gültigen Feeds in der XLSX-Datei gefunden.', 'error');
-                    return;
+                } catch (error) {
+                    console.error('Fehler beim Importieren der XLSX-Feeds:', error);
+                    showStatus(`Fehler beim Importieren der XLSX-Feeds: ${error.message}`, 'error');
                 }
-
-                // KORREKTUR: Endpoint zu `/import_feeds_xlsx` geändert
-                const response = await fetchData('/import_feeds_xlsx', 'POST', feedsToImport);
-
-                if (response && response.message) {
-                    showStatus(response.message, 'success');
-                    await loadDataFromBackend(); 
-                } else {
-                    // NEU: Zeige detailliertere Fehlermeldungen vom Backend
-                    showStatus(`Fehler beim Importieren der XLSX-Feeds: ${response.error || 'Unbekannter Fehler'}`, 'error');
-                    if (response && response.errors) {
-                        response.errors.forEach(err => console.error("Import Fehler:", err));
-                    }
-                }
-
-            } catch (error) {
-                console.error('Fehler beim Importieren der XLSX-Feeds:', error);
-                showStatus(`Fehler beim Importieren der XLSX-Feeds: ${error.message}`, 'error');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-</script>
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
 </body>
 </html>
