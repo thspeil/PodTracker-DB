@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template, send_from_directory, flash, redirect, url_for # Hinzugefügt: redirect, url_for
+from flask import Flask, request, jsonify, render_template, send_from_directory, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -8,6 +8,7 @@ import requests
 import xml.etree.ElementTree as ET
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from urllib.parse import urlparse # Import for isValidUrl
 
 # Lade Umgebungsvariablen aus .env-Datei (für lokale Entwicklung, in Codespaces durch Secrets überschrieben)
 load_dotenv()
@@ -18,17 +19,16 @@ load_dotenv()
 app = Flask(__name__, static_folder='static', template_folder='.')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FLASK_LOGIN', 'your_super_secret_key_that_you_must_change_in_production')
-# Korrektur: basedir definieren
-basedir = os.path.abspath(os.path.dirname(__file__)) # Korrektur: basedir definieren
+basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'podcast_tracker.db'))
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Deaktiviert Warnungen zur Änderungsverfolgung
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(minutes=20) # Session-Dauer für Flask-Login
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(minutes=20)
 
 db = SQLAlchemy(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Name deiner Login-Route
+login_manager.login_view = 'login'
 login_manager.login_message = "Bitte melden Sie sich an, um diese Seite zu sehen."
 login_manager.login_message_category = "warning"
 
@@ -41,11 +41,7 @@ class User(UserMixin):
 
     @staticmethod
     def get_user_by_username(username):
-        # Hier würdest du später deinen Benutzernamen aus der Datenbank abfragen.
-        # Für den Anfang definieren wir einen festen Test-Benutzer:
         if username == "user1":
-            # ACHTUNG: Ersetze diesen Hash durch den Hash deines Passworts "SpeilPW"
-            # Generiere diesen Hash einmalig mit: from werkzeug.security import generate_password_hash; print(generate_password_hash("SpeilPW"))
             hashed_pw_for_user1 = """scrypt:32768:8:1$anilOJC7MTH87cwT$624d07e2737d25657bff2e6d516bd38cdee48729cd9421b22b8f6a30f3e49a3627e3a334718f84216a6698bf0c55a21043f63fe4c73c9007ae212d6d657929d3"""
             return User(id=1, username="user1", password_hash=hashed_pw_for_user1)
         return None
@@ -55,15 +51,11 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Diese Funktion wird von Flask-Login verwendet, um den Benutzer anhand der ID zu laden.
     if user_id == '1':
-        # Stelle sicher, dass der Hash hier wieder zum oben definierten User passt.
         hashed_pw_for_user1 = """scrypt:32768:8:1$anilOJC7MTH87cwT$624d07e2737d25657bff2e6d516bd38cdee48729cd9421b22b8f6a30f3e49a3627e3a334718f84216a6698bf0c55a21043f63fe4c73c9007ae212d6d657929d3"""
         return User(id=1, username="user1", password_hash=hashed_pw_for_user1)
     return None
 
-# CORS für alle Routen aktivieren (für Entwicklung).
-# In einer Produktionsumgebung sollte dies auf spezifische Ursprünge beschränkt werden.
 CORS(app)
 
 # Definition des Datenmodells für Podcast-Feeds
@@ -94,10 +86,20 @@ class Episode(db.Model):
     def __repr__(self):
         return f'<Episode {self.title}>'
 
+# Hilfsfunktion zur URL-Validierung (korrigierte Python-Version)
+def isValidUrl(url_string):
+    try:
+        result = urlparse(url_string)
+        # Überprüfe, ob sowohl ein Schema (http, https) als auch ein Netzwerk-Ort (Domain) vorhanden ist
+        return all([result.scheme, result.netloc])
+    except:
+        return False
+
 # Hilfsfunktion zum Parsen von RSS-Feeds
 def parse_rss_feed(feed_url):
     """
     Ruft einen RSS-Feed ab und parst ihn, um Episodendaten und die Homepage-URL zu extrahieren.
+    Priorisiert spezifischere Homepage-URLs.
     """
     try:
         response = requests.get(feed_url, timeout=10)
@@ -107,25 +109,51 @@ def parse_rss_feed(feed_url):
         root = ET.fromstring(response.content)
         
         episodes_data = []
-        # Namespace für iTunes-Tags
-        itunes_ns = {'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd'}
+        # Namespaces für verschiedene RSS-Erweiterungen
+        namespaces = {
+            'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
+            'atom': 'http://www.w3.org/2005/Atom',
+            'googleplay': 'http://www.google.com/schemas/play-podcasts/1.0' # Korrigierter Google Play Namespace
+        }
 
-        # Homepage URL extrahieren (oft im <channel><link> Tag)
+        # --- Homepage URL extrahieren (Hierarchie der Präferenzen) ---
         homepage_url = None
-        channel_link = root.find('.//channel/link')
-        if channel_link is not None and channel_link.text:
-            homepage_url = channel_link.text
-            # Basic validation to ensure it looks like a URL
-            if not homepage_url.startswith(('http://', 'https://')):
-                homepage_url = None # Invalid URL, ignore
 
-        # Finde alle 'item'-Elemente im RSS-Feed (Episoden)
+        # 1. itunes:url oder itunes:feedlink (spezifisch für Podcast-Homepage)
+        itunes_url_tag = root.find('.//channel/itunes:url', namespaces)
+        if itunes_url_tag is None:
+            itunes_url_tag = root.find('.//channel/itunes:feedlink', namespaces)
+        if itunes_url_tag is not None and itunes_url_tag.text and isValidUrl(itunes_url_tag.text):
+            homepage_url = itunes_url_tag.text
+        
+        # 2. atom:link rel="alternate" (kann auch auf Homepage verweisen)
+        if homepage_url is None:
+            atom_link = root.find('.//channel/atom:link[@rel="alternate"]', namespaces)
+            if atom_link is not None and 'href' in atom_link.attrib and isValidUrl(atom_link.attrib['href']):
+                homepage_url = atom_link.attrib['href']
+
+        # 3. googleplay:link (auch spezifischer)
+        if homepage_url is None:
+            googleplay_link = root.find('.//channel/googleplay:link', namespaces)
+            if googleplay_link is not None and 'href' in googleplay_link.attrib and isValidUrl(googleplay_link.attrib['href']):
+                homepage_url = googleplay_link.attrib['href']
+
+        # 4. Fallback: Standard <channel><link> (generischer Link, kann auch der RSS-Feed selbst sein)
+        if homepage_url is None:
+            channel_link = root.find('.//channel/link')
+            if channel_link is not None and channel_link.text and isValidUrl(channel_link.text):
+                homepage_url = channel_link.text
+            
+        # Wenn immer noch keine Homepage_url gefunden wurde, setze auf None
+        if homepage_url is None:
+            print(f"Warnung: Keine spezifische Homepage-URL für {feed_url} gefunden. Verbleibt None.")
+
+        # --- Episoden-Daten extrahieren (unverändert) ---
         for item in root.findall('.//item'):
             title = item.find('title').text if item.find('title') is not None else 'No Title'
             description = item.find('description').text if item.find('description') is not None else 'No Description'
             pub_date_str = item.find('pubDate').text if item.find('pubDate') is not None else None
             
-            # Versuche, die Episode-URL zu finden (entweder enclosure url oder link)
             episode_url = None
             enclosure = item.find('enclosure')
             if enclosure is not None and 'url' in enclosure.attrib:
@@ -133,36 +161,29 @@ def parse_rss_feed(feed_url):
             elif item.find('link') is not None:
                 episode_url = item.find('link').text
 
-            # Host/Autor extrahieren
             host = None
-            # Versuche itunes:author
-            itunes_author = item.find('itunes:author', itunes_ns)
+            itunes_author = item.find('itunes:author', namespaces)
             if itunes_author is not None:
                 host = itunes_author.text
-            # Fallback auf Standard-Author-Tag
             elif item.find('author') is not None:
                 host = item.find('author').text
 
             pub_date = None
             if pub_date_str:
                 try:
-                    # Versuche, Datumsformate zu parsen (RFC 822 ist üblich für RSS)
                     pub_date = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M:%S %Z')
                 except ValueError:
                     try:
-                        # Versuche ein alternatives Format, falls das erste fehlschlägt
-                        pub_date = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M:%S %z') # Mit UTC-Offset
+                        pub_date = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M:%S %z')
                     except ValueError:
-                        # Fallback auf ein allgemeineres Format, wenn andere fehlschlagen
                         try:
-                            # Handle cases like "Mon, 01 Jan 2024 00:00:00 GMT" or "2024-01-01T00:00:00Z"
-                            # This is a very broad attempt, a robust solution would use dateutil.parser
+                            # Versuche ein alternatives Format, wenn andere fehlschlagen
                             pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
                         except ValueError:
-                            print(f"Warnung: Datum konnte nicht geparst werden: {pub_date_str}")
+                            # print(f"Warnung: Datum konnte nicht geparst werden: {pub_date_str}")
                             pass # Datum bleibt None, wenn Parsen fehlschlägt
 
-            if episode_url: # Nur Episoden mit einer URL hinzufügen
+            if episode_url and isValidUrl(episode_url): # Nur Episoden mit einer gültigen URL hinzufügen
                 episodes_data.append({
                     'title': title,
                     'description': description,
@@ -170,7 +191,10 @@ def parse_rss_feed(feed_url):
                     'url': episode_url,
                     'host': host
                 })
-        return episodes_data, homepage_url # Gebe Homepage-URL zurück
+            else:
+                print(f"Warnung: Episode {title} ohne gültige URL übersprungen.")
+
+        return episodes_data, homepage_url
     except requests.exceptions.RequestException as e:
         print(f"Fehler beim Abrufen des Feeds {feed_url}: {e}")
         return None, None
@@ -187,6 +211,7 @@ def parse_rss_feed(feed_url):
 @app.route('/')
 @login_required
 def serve_frontend():
+    # Stellt die podcast_tracker-DB.html bereit, die im template_folder (root) liegt
     return render_template('podcast_tracker-DB.html')
 
 # Routen für Login und Logout
@@ -198,14 +223,14 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = User.get_user_by_username(username) 
+        user = User.get_user_by_username(username) # Hol den Benutzer aus deiner DB
         if user and check_password_hash(user.password_hash, password):
             login_user(user, remember=True) # "Remember Me" aktivieren
             flash('Erfolgreich eingeloggt!', 'success')
             return redirect(url_for('serve_frontend'))
         else:
             flash('Ungültiger Benutzername oder Passwort.', 'danger')
-    return render_template('login.html') 
+    return render_template('login.html') # Du brauchst ein login.html Template
 
 @app.route('/logout')
 @login_required
@@ -218,11 +243,13 @@ def logout():
 # Route für Impressum
 @app.route('/impressum')
 def impressum():
+    # Stellt die Impressum.html bereit, die im template_folder (root) liegt
     return render_template('Impressum.html')
 
 # Route für Datenschutz
 @app.route('/datenschutz')
 def datenschutz():
+    # Stellt die Datenschutz.html bereit, die im template_folder (root) liegt
     return render_template('Datenschutz.html')
 
 # NEU: Route zum Servieren des Favicons
@@ -247,9 +274,9 @@ def handle_feeds():
 
         # NEU: Homepage URL extrahieren beim Hinzufügen
         episodes_data, homepage_url = parse_rss_feed(feed_url)
-        if not episodes_data: # Wenn RSS-Feed nicht geparst werden kann
-            flash(f"Fehler beim Parsen des RSS-Feeds: {feed_url}", "danger")
-            return jsonify({"error": f"Fehler beim Parsen des RSS-Feeds: {feed_url}"}), 400
+        if not episodes_data and homepage_url is None: # Wenn RSS-Feed nicht geparst werden kann und keine Homepage-URL gefunden wurde
+            flash(f"Fehler beim Parsen des RSS-Feeds oder keine Daten gefunden: {feed_url}", "danger")
+            return jsonify({"error": f"Fehler beim Parsen des RSS-Feeds oder keine Daten gefunden: {feed_url}"}), 400
 
         # Prüfen, ob Feed bereits existiert
         existing_feed = PodcastFeed.query.filter_by(url=feed_url).first()
@@ -371,11 +398,10 @@ def import_feeds_xlsx():
             flash(f"Feed ohne URL übersprungen: {feed_data}", "warning")
             continue
 
-        # NEU: Homepage URL extrahieren für Import
         episodes_data_from_rss, homepage_url = parse_rss_feed(feed_url)
-        if not episodes_data_from_rss: # Wenn RSS-Feed nicht geparst werden kann
-            errors.append(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url}")
-            flash(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url}", "danger")
+        if not episodes_data_from_rss and homepage_url is None: # Wenn RSS-Feed nicht geparst werden kann und keine Homepage-URL gefunden wurde
+            errors.append(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url} - Keine Episoden oder Homepage gefunden.")
+            flash(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url} - Keine Episoden oder Homepage gefunden.", "danger")
             continue
 
 
@@ -388,7 +414,7 @@ def import_feeds_xlsx():
                 if topic and not existing_feed.topic: 
                     existing_feed.topic = topic
                 existing_feed.is_active = is_active
-                existing_feed.homepage_url = homepage_url # Homepage URL aktualisieren
+                existing_feed.homepage_url = homepage_url
                 db.session.commit()
                 updated_count += 1
                 feeds_to_refresh_ids.append(existing_feed.id)
@@ -399,7 +425,7 @@ def import_feeds_xlsx():
                 flash(f"Fehler beim Aktualisieren von Feed {feed_url}: {str(e)}", "danger")
 
         else:
-            new_feed = PodcastFeed(url=feed_url, name=feed_name, topic=feed_topic, is_active=feed_is_active, homepage_url=homepage_url) # Homepage URL speichern
+            new_feed = PodcastFeed(url=feed_url, name=feed_name, topic=feed_topic, is_active=feed_is_active, homepage_url=homepage_url)
             db.session.add(new_feed)
             try:
                 db.session.commit()
@@ -419,7 +445,6 @@ def import_feeds_xlsx():
     for feed_id in feeds_to_refresh_ids:
         feed = PodcastFeed.query.get(feed_id)
         if feed and feed.is_active:
-            # NEU: parse_rss_feed gibt jetzt auch homepage_url zurück, wir brauchen hier nur episodes_data
             episodes_data, _ = parse_rss_feed(feed.url) 
             if episodes_data:
                 new_episodes_for_feed_count = 0
@@ -474,49 +499,6 @@ def import_feeds_xlsx():
         "errors": errors
     }), 200
 
-
-# Episoden für einen spezifischen Feed aktualisieren
-@app.route('/feeds/<int:feed_id>/refresh_episodes', methods=['POST'])
-@login_required
-def refresh_episodes_endpoint(feed_id): 
-    feed = PodcastFeed.query.get(feed_id)
-    if not feed:
-        flash("Feed nicht gefunden", "danger")
-        return jsonify({"error": "Feed nicht gefunden"}), 404
-    if not feed.is_active:
-        flash("Feed ist inaktiv und kann nicht aktualisiert werden.", "warning")
-        return jsonify({"message": "Feed ist inaktiv und kann nicht aktualisiert werden."}), 400
-
-    episodes_data, _ = parse_rss_feed(feed.url) # NEU: homepage_url wird ignoriert
-    if not episodes_data:
-        flash("Keine Episoden gefunden oder Fehler beim Parsen des Feeds", "danger")
-        return jsonify({"message": "Keine Episoden gefunden oder Fehler beim Parsen des Feeds"}), 500
-
-    new_episodes_count = 0
-    for ep_data in episodes_data:
-        existing_episode = Episode.query.filter_by(url=ep_data['url']).first()
-        if not existing_episode:
-            new_episode = Episode(
-                feed_id=feed.id,
-                title=ep_data['title'],
-                description=ep_data['description'],
-                pub_date=ep_data['pub_date'],
-                url=ep_data['url'],
-                is_favorite=False,
-                host=ep_data['host']
-            )
-            db.session.add(new_episode)
-            new_episodes_count += 1
-    
-    try:
-        feed.last_checked = datetime.utcnow()
-        db.session.commit()
-        flash(f"Episoden für Feed aktualisiert. {new_episodes_count} neue Episoden hinzugefügt.", "success")
-        return jsonify({"message": f"Episoden für Feed aktualisiert. {new_episodes_count} neue Episoden hinzugefügt."}), 200
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Fehler beim Speichern der Episoden für Feed: {str(e)}", "danger")
-        return jsonify({"error": f"Fehler beim Speichern der Episoden für Feed: {str(e)}"}), 500
 
 # Alle Episoden abrufen
 @app.route('/episodes', methods=['GET'])
@@ -582,8 +564,8 @@ def delete_episode(episode_id):
         return jsonify({"message": "Episode erfolgreich gelöscht"}), 204
     except Exception as e:
         db.session.rollback()
-        flash(f"Fehler beim Löschen der Episode: {str(e)}", "danger")
-        return jsonify({"error": f"Fehler beim Löschen der Episode: {str(e)}"}), 500
+        flash(f"Fehler beim Löschen des Feeds: {str(e)}", "danger")
+        return jsonify({"error": f"Fehler beim Löschen des Feeds: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
