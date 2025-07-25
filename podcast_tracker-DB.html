@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podcast Episode Tracker</title>
-    <link rel="icon" type="image/x-icon" href="/static/PTr-favicon.ico">
+    <!-- Favicon hinzufügen -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico"> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Tailwind CSS CDN für einfaches Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Konsolidiertes Styling */
@@ -27,691 +29,1503 @@
             max-width: 1400px;
             margin: 20px auto;
             background: rgba(255, 255, 255, 0.95);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            flex-grow: 1; /* Für Footer am unteren Rand */
         }
 
-        /* Flash-Nachrichten Styling */
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            font-weight: 700;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Input-Group Styling (unverändert) */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        input[type="url"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        input[type="url"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-container {
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            color: #4a5568;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            font-size: 16px;
+            background: transparent;
+        }
+
+        #searchInput:focus {
+            outline: none;
+        }
+
+        /* Styling für den Clear-Button im Suchfeld */
+        .search-box .clear-search-btn { 
+            padding: 8px 12px;
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-box .clear-search-btn:hover { 
+            background: #cbd5e0;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Styling für Flash-Nachrichten und Status-Nachrichten */
         .flash-message {
-            padding: 1rem;
-            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
             border-radius: 0.5rem;
             font-weight: 500;
+            z-index: 1000; 
+            position: relative; 
+            margin-bottom: 1rem; /* Added margin for spacing */
         }
-        .flash-message.success {
+        .flash-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-        .flash-message.danger {
+        .flash-danger {
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
-        .flash-message.info {
+        .flash-info {
             background-color: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
-
-        /* Status-Container für dynamische Nachrichten */
-        #status-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            max-width: 300px;
+        .flash-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
         }
-        .status-message {
-            padding: 12px 20px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            color: white;
-            opacity: 0; /* Startet unsichtbar */
-            transform: translateY(-20px); /* Startet leicht oberhalb */
-            animation: fadeInOut 5s forwards; /* Animation anwenden */
-        }
-        .status-message.info { background-color: #3b82f6; } /* Tailwind blue-500 */
-        .status-message.success { background-color: #22c55e; } /* Tailwind green-500 */
-        .status-message.error { background-color: #ef4444; } /* Tailwind red-500 */
-
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-20px); }
-            10% { opacity: 1; transform: translateY(0); }
-            90% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
+        .flash-loading {
+            background-color: #ebf8ff;
+            color: #3182ce;
+            border: 1px solid #90cdf4;
         }
 
-        /* Custom styling for editable table cells */
-        .editable-cell {
-            border: 1px solid transparent;
-            padding: 4px;
-            min-width: 50px; /* Adjust as needed */
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: white;
         }
 
-        .editable-cell:hover {
-            border-color: #ccc;
+        table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .editable-cell:focus {
-            border-color: #667eea;
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            line-height: 1.3;
+        }
+
+        th {
+            background: linear-gradient(45deg, #f7fafc, #edf2f7);
+            font-weight: 600;
+            color: #2d3748;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .date {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .editable {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .editable:hover {
+            background: #f0f4f8;
+        }
+
+        .editable.editing {
+            background: #fff;
+            border: 2px solid #667eea;
+        }
+
+        .editable input {
+            border: none;
             outline: none;
-            background-color: #f0f4ff; /* Light blue background on focus */
+            background: transparent;
+            font-size: 14px;
+            color: #4a5568;
+            width: 100%;
         }
 
-        /* Flexbox für den Hauptinhalt und Footer */
-        .content-wrapper {
-            flex: 1; /* Nimmt den restlichen vertikalen Platz ein */
+        .favorite-star {
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
         }
 
+        .favorite-star:hover {
+            transform: scale(1.2);
+        }
+
+        .favorite-star.active {
+            color: #fbbf24;
+        }
+
+        .favorite-star.inactive {
+            color: #d1d5db;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            opacity: 0.3;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+        }
+
+        .no-results svg {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            opacity: 0.3;
+        }
+
+        .podcast-feeds {
+            margin-bottom: 20px;
+        }
+
+        .feeds-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+
+        .feeds-header:hover {
+            background: #edf2f7;
+        }
+
+        .feeds-toggle {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+            transition: transform 0.3s ease;
+        }
+
+        .feeds-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .feeds-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .feeds-content.collapsed {
+            max-height: 0;
+        }
+
+        /* NEW CSS for feed list header and item layout */
+        .feed-list-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: #e2e8f0; /* Lighter background for header */
+            border-radius: 8px 8px 0 0; /* Rounded top corners */
+            margin-bottom: 5px; /* Space between header and first feed item */
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .feed-header-col {
+            padding: 0 5px; /* Consistent padding */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center; /* Vertically align text */
+        }
+
+        /* Column widths - adjust as needed for alignment */
+        .feed-header-col.header-checkbox,
+        .feed-item .feed-checkbox-container { 
+            flex: 0 0 40px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .feed-header-col.header-podcast-name,
+        .feed-podcast-name {
+            flex-basis: 234px; 
+            flex-shrink: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+            padding-right: 5px; 
+        }
+
+        .feed-header-col.header-rss-url,
+        .feed-url {
+            flex-grow: 1; 
+            margin-right: 10px; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 150px; 
+        }
+        
+        .feed-header-col.header-topic,
+        .feed-topic { 
+            flex-basis: 150px; 
+            flex-shrink: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 4px 8px; 
+        }
+        
+        .feed-header-col.header-remove {
+            flex-basis: 80px; 
+            flex-grow: 0; 
+            text-align: center;
+            display: flex; 
+            justify-content: center; 
+        }
+
+        .feed-item {
+            display: flex;
+            align-items: center;
+            padding: 3px 16px; 
+            background: #f8fafc;
+            border-radius: 6px;
+            margin-bottom: 3px; 
+        }
+
+        .feed-item:last-child {
+            margin-bottom: 0; 
+        }
+
+        /* Styling für den "Entfernen"-Button im Feed-Item */
+        .remove-feed {
+            padding: 3px 6px;
+            font-size: 13px;
+            flex-basis: 80px; 
+            flex-grow: 0;
+            @apply bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-150 ease-in-out;
+        }
+
+
+        .podcast-name {
+            font-weight: 600;
+            color: #667eea;
+            max-width: 292.5px; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .episode-title {
+            color: #2d3748;
+            font-weight: 500;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .host {
+            color: #4a5568;
+            font-size: 14px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+            height: auto;
+            min-height: 1.4em;
+        }
+
+        .highlight {
+            background: #fef5e7;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #cbd5e0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .input-group {
+                min-width: auto;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .filter-group {
+                justify-content: space-between;
+            }
+            
+            th, td {
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+            .episode-title {
+                max-width: 200px;
+            }
+
+            /* Adjustments for mobile view of feed list */
+            .feed-list-header, .feed-item {
+                flex-wrap: wrap; 
+                padding: 6px 10px; 
+            }
+
+            .feed-header-col, .feed-item > * {
+                flex-basis: auto !important; 
+                width: 100%; 
+                margin-bottom: 2px; 
+            }
+
+            .feed-header-col.header-checkbox,
+            .feed-item > input[type="checkbox"] {
+                width: auto; 
+                margin-bottom: 0;
+            }
+
+            .feed-header-col.header-remove,
+            .remove-feed {
+                width: auto; 
+                margin-left: auto; 
+                margin-bottom: 0;
+            }
+            .feed-url, .feed-podcast-name, .feed-topic {
+                white-space: normal; 
+                word-break: break-word; 
+                max-width: none; 
+            }
+        }
+
+        /* NEW CSS for Footer */
         footer {
-            margin-top: auto; /* Sorgt dafür, dass der Footer am unteren Rand klebt */
+            margin-top: 40px;
             padding: 20px;
             text-align: center;
-            color: white;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9em;
         }
 
-        /* Styling für den Confirmation Modal */
-        .modal {
+        footer a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* Custom Modal CSS */
+        .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
         .modal-content {
-            background-color: white;
-            padding: 25px;
-            border-radius: 8px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             max-width: 400px;
             width: 90%;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
         }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-content h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .modal-content p {
+            color: #4a5568;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
         .modal-buttons button {
-            margin: 10px;
-            padding: 8px 15px;
-            border-radius: 5px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .modal-buttons .confirm {
-            background-color: #ef4444; /* red-500 */
+
+        .modal-buttons .btn-confirm {
+            background: linear-gradient(45deg, #e53e3e, #c53030);
             color: white;
             border: none;
         }
-        .modal-buttons .cancel {
-            background-color: #cbd5e1; /* gray-300 */
-            color: #374151;
+
+        .modal-buttons .btn-confirm:hover {
+            box-shadow: 0 5px 15px rgba(229, 62, 62, 0.3);
+        }
+
+        .modal-buttons .btn-cancel {
+            background: #e2e8f0;
+            color: #4a5568;
             border: none;
         }
+
+        .modal-buttons .btn-cancel:hover {
+            background: #cbd5e0;
+        }
+
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
-    <div id="status-container"></div>
+<body>
 
-    <header class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-3xl font-bold">Podcast Tracker</h1>
-            <nav>
-                <span class="mr-4">Hallo, <%= username %></span>
-                <a href="/logout" class="bg-white text-indigo-700 px-4 py-2 rounded-md hover:bg-gray-100 transition duration-300">Logout</a>
-            </nav>
+    <!-- Flash Nachrichten Bereich (Flask Flash Messages) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="fixed top-4 right-4 z-[1001] space-y-2 w-full max-w-sm">
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }} rounded-lg shadow-lg text-sm p-3">
+                    {{ message }}
+                </div>
+            {% endfor %}
         </div>
-    </header>
+    {% endif %}
+{% endwith %} 
 
-    <main class="content-wrapper container">
-        <div id="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="flash-message {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+    <div class="container">
+        <!-- Header mit App-Name und Logout-Button -->
+        <div class="flex justify-between items-center mb-10">
+            <h1 class="text-5xl">🎧 Podcast Episode Tracker</h1>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center group" title="Abmelden">
+                    <svg class="w-5 h-5 mr-2 text-gray-600 group-hover:text-gray-800 transition duration-150 ease-in-out" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1"></path>
+                    </svg>
+                    Abmelden
+                </a>
+                <span class="ml-4 text-gray-700">Hallo, {{ current_user.username }}</span> <!-- Korrektur des Usernamens -->
+            {% endif %}
         </div>
         
-        <section class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Feed Management</h2>
-            <div class="flex flex-col md:flex-row items-center gap-4 mb-4">
-                <input type="text" id="rssFeedUrl" placeholder="RSS Feed URL eingeben" class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <button id="addFeedBtn" class="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 transition duration-300 flex-shrink-0">Feed hinzufügen</button>
-                <button id="refreshAllFeedsBtn" class="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition duration-300 flex-shrink-0">Alle Aktualisieren</button>
+        <div class="controls">
+            <div class="input-group">
+                <input type="url" id="rssUrl" placeholder="RSS Feed URL eingeben (z.B. https://example.com/feed.xml)">
+                <!-- Button mit Tailwind-Klassen -->
+                <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="addFeed()">Feed hinzufügen</button>
             </div>
-            <div class="flex flex-col md:flex-row items-center gap-4">
-                <input type="file" id="importXlsxInput" accept=".xlsx" class="flex-grow p-2 border border-gray-300 rounded-md">
-                <button id="importFeedsXlsxBtn" class="bg-yellow-600 text-white px-6 py-3 rounded-md hover:bg-yellow-700 transition duration-300 flex-shrink-0">Import Feeds (XLSX)</button>
-                <button id="exportFeedsXlsxBtn" class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-300 flex-shrink-0">Export to XLSX</button>
-            </div>
-        </section>
-
-        <section class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4 cursor-pointer" id="toggleFeedsList">
-                Meine Podcasts <span id="toggleIcon">▼</span>
-            </h2>
-            <div id="podcastFeeds" class="space-y-4">
-                <p class="text-gray-600">Lade Podcasts...</p>
-            </div>
-        </section>
-
-        <section class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Episoden filtern</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                    <label for="filterEpisodes" class="block text-sm font-medium text-gray-700">Zeitraum:</label>
-                    <select id="filterEpisodes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+            <!-- Button mit Tailwind-Klassen -->
+            <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="refreshAll()">Alle aktualisieren</button>
+            <input type="file" id="importFeedsXLSXFile" accept=".xlsx" style="display: none;" onchange="importFeedsFromXLSX(event)">
+            <!-- Button mit Tailwind-Klassen -->
+            <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="document.getElementById('importFeedsXLSXFile').click()">Feeds importieren (XLSX)</button>
+        </div>
+        
+        <div class="filter-container">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="timeFilter">Zeitraum:</label>
+                    <select id="timeFilter" onchange="applyFilters()">
                         <option value="all">Alle</option>
-                        <option value="last_week">Letzte Woche</option>
-                        <option value="last_month">Letzter Monat</option>
-                        <option value="last_quarter">Letztes Quartal</option>
-                        <option value="last_year">Letztes Jahr</option>
+                        <option value="week">Letzte Woche</option>
+                        <option value="month" selected>Letzter Monat</option> <!-- Standardwert belegt -->
+                        <option value="quarter">Letztes Quartal</option>
+                        <option value="year">Letztes Jahr</option>
                     </select>
                 </div>
-                <div>
-                    <label for="limitEpisodes" class="block text-sm font-medium text-gray-700">Anzahl der Episoden:</label>
-                    <select id="limitEpisodes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                        <option value="0">Alle</option>
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="30">30</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
+                <div class="filter-group">
+                    <label for="countFilter">Anzahl:</label>
+                    <select id="countFilter" onchange="applyFilters()">
+                        <option value="all">Alle</option>
+                        <option value="10" selected>Letzte 10</option> <!-- Standardwert belegt -->
+                        <option value="20">Letzte 20</option>
+                        <option value="30">Letzte 30</option>
+                        <option value="50">Letzte 50</option>
+                        <option value="100">Letzte 100</option>
                     </select>
                 </div>
-                <div>
-                    <label for="searchEpisodes" class="block text-sm font-medium text-gray-700">Suche (Titel, Beschreibung, Host, Podcast-Name):</label>
-                    <input type="text" id="searchEpisodes" placeholder="Stichwortsuche..." class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
             </div>
-            <button id="applyFiltersBtn" class="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 transition duration-300">Filter anwenden</button>
-        </section>
+        </div>
 
-        <section>
-            <div class="overflow-x-auto bg-white rounded-lg shadow-lg p-6 mb-8 max-h-[600px] overflow-y-auto">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Episoden</h2>
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Podcast-Name </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Episode
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Datum
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Host
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Favorit
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Aktionen
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="episodesTableBody" class="bg-white divide-y divide-gray-200">
-                        </tbody>
-                </table>
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Suche nach Stichworten in allen Spalten..." oninput="applyFilters()">
+                <!-- Spezifische Klasse für den Clear-Button in der Suche -->
+                <button class="clear-search-btn" onclick="clearSearch()">✕</button>
             </div>
-        </section>
-    </main>
+            <div class="search-stats" id="searchStats"></div>
+        </div>
 
-    <div id="confirmationModal" class="modal hidden">
+        <div class="podcast-feeds" id="podcastFeeds">
+            <div class="feeds-header" onclick="toggleFeedsList()" style="display: none;">
+                <span class="feeds-toggle" id="feedsToggle">▼</span>
+                <span>Podcast-Feeds (<span id="feedCount">0</span>)</span>
+            </div>
+            <div class="feeds-content" id="feedsContent"></div>
+        </div>
+
+        <!-- Button mit Tailwind-Klassen -->
+        <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="exportToXLSX()" style="margin-bottom: 20px;">Ergebnisse als XLSX exportieren</button>
+
+        <!-- Das Status-Element ist jetzt fest positioniert und nutzt flash-message Klassen -->
+        <!-- Positioniert unterhalb der Flask Flash Messages -->
+        <div id="statusContainer" class="fixed top-4 right-4 z-[1000] space-y-2 w-full max-w-sm"> 
+            <div class="flash-message" id="status" style="display: none;"></div>
+        </div>
+
+        <div class="table-container">
+            <table id="episodeTable">
+                <thead>
+                    <tr>
+                        <th>Podcast-Name</th> <!-- Geändert von "Podcast" zu "Podcast-Name" -->
+                        <th>Episode</th>
+                        <th>Datum</th>
+                        <th>Host</th>
+                        <th>Favorit</th>
+                    </tr>
+                </thead>
+                <tbody id="episodeTableBody">
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                        </svg>
+                            <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
+                            <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEUER FOOTER BEREICH -->
+    <footer>
+        <p>&copy; 2025 Podcast Tracker. Alle Rechte vorbehalten.</p>
+        <div>
+            <a href="/impressum" target="_blank">Impressum</a>
+            <a href="/datenschutz" target="_blank">Datenschutz</a>
+        </div>
+    </footer>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="modal-overlay">
         <div class="modal-content">
-            <p id="modalMessage" class="mb-5 text-lg font-semibold text-gray-800">Möchten Sie diesen Eintrag wirklich löschen?</p>
+            <h3 id="modalTitle">Bestätigung erforderlich</h3>
+            <p id="modalMessage"></p>
             <div class="modal-buttons">
-                <button id="confirmYes" class="confirm">Ja</button>
-                <button id="confirmNo" class="cancel">Nein</button>
+                <button class="btn-cancel" onclick="hideConfirmationModal(false)">Abbrechen</button>
+                <button class="btn-confirm" onclick="hideConfirmationModal(true)">Bestätigen</button>
             </div>
         </div>
     </div>
 
-    <footer class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white p-4 mt-8">
-        <div class="container mx-auto text-center text-sm">
-            <p>&copy; 2024 Podcast Tracker. All rights reserved.</p>
-            <div class="mt-2">
-                <a href="/impressum" class="text-indigo-200 hover:text-white mx-2">Impressum</a>
-                <span class="text-indigo-200">|</span>
-                <a href="/datenschutz" class="text-indigo-200 hover:text-white mx-2">Datenschutz</a>
-            </div>
-        </div>
-    </footer>
-
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadDataFromBackend();
-            // Show any initial flash messages from Flask
-            displayFlashMessages();
-        });
+        let allFeeds = [];
+        let allEpisodes = [];
+        let filteredEpisodes = [];
+        let currentSearchTerm = '';
+        let feedsCollapsed = false;
 
-        // Event Listener für "Feed hinzufügen" Button
-        document.getElementById('addFeedBtn').addEventListener('click', async () => {
-            const rssFeedUrl = document.getElementById('rssFeedUrl').value;
-            if (rssFeedUrl) {
-                showStatus('Füge Feed hinzu...', 'info');
-                const response = await fetchData('/add_feed', 'POST', { feed_url: rssFeedUrl });
-                if (response && response.message) {
-                    showStatus(response.message, 'success');
-                    document.getElementById('rssFeedUrl').value = ''; // Inputfeld leeren
-                    await loadDataFromBackend(); // Daten nach Hinzufügen neu laden
-                } else {
-                    showStatus(response.error || 'Fehler beim Hinzufügen des Feeds.', 'error');
+        // Promise-basiertes Callback für das benutzerdefinierte Modal
+        let confirmActionResolve = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlInput = document.getElementById('rssUrl');
+            urlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addFeed();
                 }
-            } else {
-                showStatus('Bitte geben Sie eine RSS Feed URL ein.', 'error');
-            }
-        });
+            });
+            loadDataFromBackend();
 
-        // Event Listener für "Alle Aktualisieren" Button
-        document.getElementById('refreshAllFeedsBtn').addEventListener('click', async () => {
-            showStatus('Aktualisiere alle Feeds...', 'info');
-            const response = await fetchData('/feeds', 'GET'); // Rufe Feeds ab
-            if (response && Array.isArray(response)) {
-                let updatedCount = 0;
-                let errorCount = 0;
-                for (const feed of response) {
-                    const updateResponse = await fetchData(`/update_feed/${feed.id}`, 'POST');
-                    if (updateResponse && updateResponse.message) {
-                        updatedCount++;
-                    } else {
-                        errorCount++;
-                        console.error(`Fehler beim Aktualisieren von Feed ${feed.url}:`, updateResponse.error);
-                    }
+            // Automatisches Ausblenden von Flask Flash Messages
+            document.querySelectorAll('.flash-message').forEach(function(flashMessage) {
+                // Überprüfe, ob es sich nicht um das Status-Element handelt, das von JS kontrolliert wird
+                if (flashMessage.id !== 'status') { // Exclude JS-controlled status element
+                    setTimeout(function() {
+                        flashMessage.style.transition = 'opacity 0.5s ease-out';
+                        flashMessage.style.opacity = '0';
+                        setTimeout(function() {
+                            flashMessage.remove(); // Entfernt das Element nach der Animation
+                        }, 500); // Warte, bis die Opacity-Transition abgeschlossen ist
+                    }, 5000); // 5 Sekunden, bevor das Ausblenden beginnt
                 }
-                showStatus(`Alle Feeds aktualisiert. Erfolgreich: ${updatedCount}, Fehler: ${errorCount}.`, 'success');
-                await loadDataFromBackend(); // Alle Daten neu laden
-            } else {
-                showStatus('Fehler beim Abrufen der Feeds zur Aktualisierung.', 'error');
+            });
+        });
+
+        // Funktion zum Anzeigen des benutzerdefinierten Bestätigungsmodals
+        function showConfirmationModal(message) {
+            const modal = document.getElementById('confirmationModal');
+            const modalMessage = document.getElementById('modalMessage');
+            modalMessage.textContent = message;
+            modal.classList.add('active');
+
+            return new Promise(resolve => {
+                confirmActionResolve = resolve;
+            });
+        }
+
+        // Funktion zum Ausblenden des Modals und Auflösen des Promises
+        function hideConfirmationModal(confirmed) {
+            const modal = document.getElementById('confirmationModal');
+            modal.classList.remove('active');
+            if (confirmActionResolve) {
+                confirmActionResolve(confirmed);
+                confirmActionResolve = null; // Reset
             }
-        });
+        }
 
-        // Event Listener für Import XLSX Button
-        document.getElementById('importFeedsXlsxBtn').addEventListener('click', async () => {
-            document.getElementById('importXlsxInput').click(); // Trigger file input click
-        });
-
-        document.getElementById('importXlsxInput').addEventListener('change', handleXLSXImport);
-
-        // Event Listener für Export XLSX Button
-        document.getElementById('exportFeedsXlsxBtn').addEventListener('click', async () => {
-            showStatus('Exportiere Feeds...', 'info');
-            const response = await fetchData('/export_feeds_xlsx', 'GET');
-            if (response && response.message) {
-                showStatus(response.message, 'success');
-                // Hier würde später der Download der Datei initiiert
-            } else {
-                showStatus(response.error || 'Fehler beim Exportieren der Feeds.', 'error');
+        async function fetchData(url, method = 'GET', data = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+            if (data) {
+                options.body = JSON.stringify(data);
             }
-        });
 
-        // Event Listener für Filter anwenden Button
-        document.getElementById('applyFiltersBtn').addEventListener('click', loadDataFromBackend);
-        document.getElementById('searchEpisodes').addEventListener('input', loadDataFromBackend); // Live-Suche
-        document.getElementById('filterEpisodes').addEventListener('change', loadDataFromBackend);
-        document.getElementById('limitEpisodes').addEventListener('change', loadDataFromBackend);
-
-        // Toggle für Podcast Feeds Liste
-        document.getElementById('toggleFeedsList').addEventListener('click', () => {
-            const podcastFeedsDiv = document.getElementById('podcastFeeds');
-            const toggleIcon = document.getElementById('toggleIcon');
-            if (podcastFeedsDiv.classList.contains('hidden')) {
-                podcastFeedsDiv.classList.remove('hidden');
-                toggleIcon.textContent = '▼';
-            } else {
-                podcastFeedsDiv.classList.add('hidden');
-                toggleIcon.textContent = '►';
-            }
-        });
-
-        // Funktion zum Abrufen von Daten vom Backend
-        async function fetchData(url, method, data = null) {
             try {
-                const options = {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                };
-                if (data) {
-                    options.body = JSON.stringify(data);
-                }
                 const response = await fetch(url, options);
-                
-                // Wenn die Antwort ein 204 No Content ist, gibt es kein JSON
+                // Handle 204 No Content for DELETE requests gracefully
                 if (response.status === 204) {
-                    return { message: "Operation erfolgreich (kein Inhalt)." };
+                    return {};
                 }
-                
-                const responseData = await response.json();
                 if (!response.ok) {
-                    // Wenn der Statuscode ein Fehler ist (z.B. 400, 500)
-                    throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    let errorMessage = `HTTP error! Status: ${response.status}`;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage = errorJson.error || errorJson.message || errorMessage;
+                    } catch {
+                        errorMessage = `${errorMessage}, Message: ${errorText}`;
+                    }
+                    throw new Error(errorMessage);
                 }
-                return responseData;
+                return await response.json();
             } catch (error) {
-                console.error('Fetch error:', error);
-                return { error: error.message };
+                console.error('Fehler beim Abrufen/Senden von Daten:', error);
+                showStatus(`Fehler: ${error.message}`, 'danger'); // Changed type to danger for errors
+                return null;
             }
         }
 
-        // Hauptfunktion zum Laden aller Daten
         async function loadDataFromBackend() {
-            showStatus('Lade Daten...', 'info');
-            try {
-                const [feedsResponse, episodesResponse] = await Promise.all([
-                    fetchData('/feeds', 'GET'),
-                    fetchData('/episodes', 'GET')
-                ]);
+            showStatus('Lade Daten...', 'loading');
+            const feedsResponse = await fetchData('/feeds');
+            const episodesResponse = await fetchData('/episodes'); 
 
-                if (feedsResponse && Array.isArray(feedsResponse)) {
-                    loadFeedsIntoUI(feedsResponse);
-                } else {
-                    showStatus(feedsResponse.error || 'Fehler beim Laden der Feeds.', 'error');
-                }
+            if (feedsResponse && Array.isArray(feedsResponse) && episodesResponse && Array.isArray(episodesResponse)) {
+                allFeeds = feedsResponse;
+                // Sortiere Feeds zuerst nach Thema, dann nach Podcast-Name
+                allFeeds.sort((a, b) => {
+                    const topicA = (a.topic || '').toLowerCase();
+                    const topicB = (b.topic || '').toLowerCase();
+                    const nameA = (a.name || a.url).toLowerCase();
+                    const nameB = (b.name || b.url).toLowerCase();
 
-                if (episodesResponse && Array.isArray(episodesResponse)) {
-                    displayEpisodes(episodesResponse);
-                } else {
-                    showStatus(episodesResponse.error || 'Fehler beim Laden der Episoden.', 'error');
-                }
-                showStatus('Daten erfolgreich geladen.', 'success');
-            } catch (error) {
-                showStatus(`Fehler beim Laden der Daten: ${error.message}`, 'error');
-                console.error('Fehler beim Laden der Daten:', error);
+                    if (topicA < topicB) return -1;
+                    if (topicA > topicB) return 1;
+                    return nameA.localeCompare(nameB); // Sortiere nach Name, wenn Thema gleich ist
+                });
+
+                allEpisodes = episodesResponse;
+                allEpisodes.sort((a, b) => new Date(b.pub_date) - new Date(a.pub_date));
+                
+                applyFilters();
+                updateFeedsList();
+                showStatus('', 'hide'); 
+            } else {
+                showStatus('Fehler beim Laden der Daten vom Backend', 'danger'); // Changed type to danger
             }
         }
 
-        // Funktion zur Anzeige von Flash-Nachrichten (von Flask)
-        function displayFlashMessages() {
-            const flashMessagesDiv = document.getElementById('flash-messages');
-            if (flashMessagesDiv) {
-                // Flask-Nachrichten werden direkt in das HTML gerendert.
-                // Wir können sie nach einer Weile ausblenden.
+        function getEpisodeId(episode) {
+            return episode.id; 
+        }
+
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('status'); 
+            if (!statusElement) {
+                console.error("Status-Element mit ID 'status' nicht gefunden!");
+                return;
+            }
+
+            // Reset classes before adding new ones
+            statusElement.className = 'flash-message rounded-lg shadow-lg text-sm p-3';
+
+            if (type === 'hide') {
+                statusElement.style.transition = 'opacity 0.5s ease-out';
+                statusElement.style.opacity = '0';
                 setTimeout(() => {
-                    flashMessagesDiv.innerHTML = ''; // Nachrichten leeren
-                }, 5000); // 5 Sekunden
-            }
-        }
-
-        // Funktion zur Anzeige von dynamischen Statusmeldungen
-        function showStatus(message, type = 'info') {
-            const statusContainer = document.getElementById('status-container');
-            const statusMessageDiv = document.createElement('div');
-            statusMessageDiv.className = `status-message ${type}`;
-            statusMessageDiv.textContent = message;
-            statusContainer.appendChild(statusMessageDiv);
-
-            // Nachricht nach 4.5 Sekunden ausblenden
-            setTimeout(() => {
-                statusMessageDiv.style.animation = 'none'; // Animation stoppen, um sofortiges Ausblenden zu ermöglichen
-                statusMessageDiv.style.opacity = '0';
-                statusMessageDiv.style.transform = 'translateY(-20px)';
-                statusMessageDiv.addEventListener('transitionend', () => statusMessageDiv.remove());
-                statusMessageDiv.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
-            }, 4500); // Startet das Ausblenden kurz vor dem vollständigen Verschwinden der CSS-Animation
-        }
-
-        // Funktion zum Laden und Anzeigen der Feeds im UI
-        async function loadFeedsIntoUI(feeds) {
-            const podcastFeedsDiv = document.getElementById('podcastFeeds');
-            podcastFeedsDiv.innerHTML = ''; // Vorherige Feeds leeren
-
-            if (feeds.length === 0) {
-                podcastFeedsDiv.innerHTML = '<p class="text-gray-600">Noch keine Podcasts hinzugefügt.</p>';
+                    statusElement.style.display = 'none';
+                    statusElement.textContent = ''; // Clear text on hide
+                }, 500);
                 return;
             }
 
-            feeds.forEach(feed => {
-                const feedElement = document.createElement('div');
-                feedElement.className = 'bg-white shadow-md rounded-lg p-4 mb-4 flex justify-between items-center transition duration-300 ease-in-out transform hover:scale-101';
-                
-                // Podcast-Name soll klickbar sein
-                const podcastNameLink = document.createElement('a');
-                podcastNameLink.href = feed.homepage_url ? feed.homepage_url : '#'; // Wenn homepage_url existiert, verwenden, sonst #
-                podcastNameLink.target = "_blank"; // In neuem Tab öffnen
-                podcastNameLink.rel = "noopener noreferrer"; // Sicherheit
-                podcastNameLink.className = 'font-semibold text-indigo-700 hover:underline'; // Styling für Link
-                podcastNameLink.textContent = feed.name; // Podcast-Name
-
-                feedElement.innerHTML = `
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-lg font-bold text-gray-900 truncate" title="${feed.name}">
-                            ${podcastNameLink.outerHTML} 
-                        </h3>
-                        <p class="text-sm text-gray-600 truncate" title="${feed.url}">${feed.url}</p>
-                        <p class="text-sm text-gray-500">Topic: ${feed.topic || 'N/A'}</p>
-                        <p class="text-xs text-gray-400">Zuletzt geprüft: ${new Date(feed.last_checked).toLocaleString()}</p>
-                        <p class="text-xs text-gray-400">Episoden: ${feed.episodes_count}</p>
-                    </div>
-                    <div class="flex-shrink-0 ml-4">
-                        <button class="update-feed-btn bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm mr-2" data-id="${feed.id}" data-url="${feed.url}">Aktualisieren</button>
-                        <button class="delete-feed-btn bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm" data-id="${feed.id}">Löschen</button>
-                    </div>
-                `;
-                podcastFeedsDiv.appendChild(feedElement);
-            });
-
-            // Event Listener für Aktualisierungs-Buttons hinzufügen
-            document.querySelectorAll('.update-feed-btn').forEach(button => {
-                button.onclick = async (event) => {
-                    event.stopPropagation();
-                    const feedId = button.dataset.id;
-                    const feedUrl = button.dataset.url;
-                    showStatus(`Aktualisiere Feed ${feedUrl}...`, 'info');
-                    const response = await fetchData(`/update_feed/${feedId}`, 'POST');
-                    if (response && response.message) {
-                        showStatus(response.message, 'success');
-                        await loadDataFromBackend(); // Daten nach Aktualisierung neu laden
-                    } else {
-                        showStatus(response.error || 'Fehler beim Aktualisieren des Feeds.', 'error');
-                    }
-                };
-            });
-
-            // Event Listener für Löschen-Buttons hinzufügen
-            document.querySelectorAll('.delete-feed-btn').forEach(button => {
-                button.onclick = async (event) => {
-                    event.stopPropagation();
-                    const feedId = button.dataset.id;
-                    showConfirmModal('Möchten Sie diesen Feed wirklich löschen? Alle zugehörigen Episoden werden ebenfalls gelöscht.', async () => {
-                        const response = await fetchData(`/delete_feed/${feedId}`, 'DELETE');
-                        if (response && response.message) {
-                            showStatus(response.message, 'success');
-                            await loadDataFromBackend(); // Daten nach Löschen neu laden
-                        } else {
-                            showStatus(response.error || 'Fehler beim Löschen des Feeds.', 'error');
-                        }
-                    });
-                };
-            });
+            statusElement.textContent = message;
+            statusElement.classList.add(`flash-${type}`); // Add type specific class
+            statusElement.style.display = 'block';
+            statusElement.style.opacity = '1'; 
+            
+            if (type !== 'loading') { 
+                setTimeout(() => {
+                    statusElement.style.transition = 'opacity 0.5s ease-out';
+                    statusElement.style.opacity = '0';
+                    setTimeout(() => {
+                        statusElement.style.display = 'none';
+                        statusElement.textContent = ''; // Clear text on hide
+                    }, 500); 
+                }, 5000); 
+            }
         }
 
-        // Funktion zum Anzeigen der Episoden
-        async function displayEpisodes(episodes) {
-            const episodesTableBody = document.getElementById('episodesTableBody');
-            episodesTableBody.innerHTML = ''; // Bestehende Einträge leeren
-
-            if (!episodes || episodes.length === 0) {
-                episodesTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Keine Episoden gefunden.</td></tr>`;
+        async function addFeed() {
+            const urlInput = document.getElementById('rssUrl');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showStatus('Bitte geben Sie eine RSS-Feed-URL ein', 'warning');
                 return;
             }
 
-            const currentFilter = document.getElementById('filterEpisodes').value;
-            const searchKeyword = document.getElementById('searchEpisodes').value.toLowerCase();
-            const maxEpisodes = parseInt(document.getElementById('limitEpisodes').value);
-
-            let filteredEpisodes = episodes.filter(episode => {
-                const episodeDate = new Date(episode.pub_date);
-                const now = new Date(); // Aktuelles Datum für Vergleich
-
-                let dateMatch = true;
-                if (currentFilter === 'last_week') {
-                    const lastWeek = new Date(now);
-                    lastWeek.setDate(now.getDate() - 7);
-                    dateMatch = episodeDate >= lastWeek;
-                } else if (currentFilter === 'last_month') {
-                    const lastMonth = new Date(now);
-                    lastMonth.setMonth(now.getMonth() - 1);
-                    dateMatch = episodeDate >= lastMonth;
-                } else if (currentFilter === 'last_quarter') {
-                    const lastQuarter = new Date(now);
-                    lastQuarter.setMonth(now.getMonth() - 3);
-                    dateMatch = episodeDate >= lastQuarter;
-                } else if (currentFilter === 'last_year') {
-                    const lastYear = new Date(now);
-                    lastYear.setFullYear(now.getFullYear() - 1);
-                    dateMatch = episodeDate >= lastYear;
-                }
-
-                const searchMatch = searchKeyword === '' ||
-                                    (episode.title && episode.title.toLowerCase().includes(searchKeyword)) ||
-                                    (episode.description && episode.description.toLowerCase().includes(searchKeyword)) ||
-                                    (episode.host && episode.host.toLowerCase().includes(searchKeyword)) ||
-                                    (episode.podcast_name && episode.podcast_name.toLowerCase().includes(searchKeyword));
-
-                return dateMatch && searchMatch;
-            });
-
-            // Sortiere Episoden nach Datum (neueste zuerst)
-            filteredEpisodes.sort((a, b) => new Date(b.pub_date) - new Date(a.pub_date));
-
-            // Beschränke die Anzahl der angezeigten Episoden
-            if (maxEpisodes > 0) {
-                filteredEpisodes = filteredEpisodes.slice(0, maxEpisodes);
+            if (!isValidUrl(url)) {
+                showStatus('Bitte geben Sie eine gültige URL ein', 'warning');
+                return;
             }
 
-            filteredEpisodes.forEach(episode => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-                
-                // Episoden-Titel soll klickbar sein
-                const episodeTitleLink = document.createElement('a');
-                episodeTitleLink.href = episode.url || '#'; // Nutze episode.url für den Link
-                episodeTitleLink.target = "_blank"; // In neuem Tab öffnen
-                episodeTitleLink.rel = "noopener noreferrer"; // Sicherheit
-                episodeTitleLink.className = 'text-indigo-600 hover:underline';
-                episodeTitleLink.textContent = episode.title;
+            // We no longer check `existingFeed` here, the backend handles it as an update if exists
+            // and returns a message indicating so.
 
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${episode.podcast_name || 'N/A'}</div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm font-medium text-gray-900">
-                            ${episodeTitleLink.outerHTML}
+            showStatus('Füge Feed hinzu...', 'loading');
+            const response = await fetchData('/add_feed', 'POST', { feed_url: url }); 
+
+            if (response && response.message) {
+                urlInput.value = '';
+                showStatus(response.message, 'success');
+                // Removed explicit refreshFeedEpisodes, as add_feed backend handles it
+                await loadDataFromBackend(); // Load all data to update feeds list and episodes
+            } else if (response && response.error) {
+                showStatus(`Fehler beim Hinzufügen des Feeds: ${response.error}`, 'danger');
+            } else {
+                showStatus('Unbekannter Fehler beim Hinzufügen des Feeds', 'danger');
+            }
+        }
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        async function removeFeed(feedId) {
+            const feedToRemove = allFeeds.find(f => f.id === feedId);
+            if (!feedToRemove) return;
+
+            const episodeCount = allEpisodes.filter(episode => episode.feed_id === feedId).length;
+            let confirmationMessage = `Möchten Sie diesen Feed wirklich entfernen?`;
+            if (episodeCount > 0) {
+                confirmationMessage += `\n\nDies wird ${episodeCount} Episode(n) und alle zugehörigen Daten löschen.`;
+            }
+            
+            const userConfirmed = await showConfirmationModal(confirmationMessage);
+            if (!userConfirmed) {
+                return;
+            }
+            
+            showStatus('Entferne Feed...', 'loading');
+            const response = await fetchData(`/delete_feed/${feedId}`, 'DELETE');
+
+            if (response !== null) { // Check if response is not null (success or empty object for 204)
+                showStatus(`Feed entfernt`, 'success');
+                await loadDataFromBackend();
+            } else { 
+                showStatus(`Fehler beim Entfernen des Feeds.`, 'danger');
+            }
+        }
+
+        function updateFeedsList() {
+            const feedsHeader = document.querySelector('.feeds-header');
+            const feedsContent = document.getElementById('feedsContent');
+            const feedCount = document.getElementById('feedCount');
+            
+            if (allFeeds.length === 0) {
+                feedsHeader.style.display = 'none';
+                feedsContent.innerHTML = '<p class="text-gray-600">Noch keine Podcasts hinzugefügt.</p>';
+                return;
+            }
+
+            feedsHeader.style.display = 'flex';
+            feedCount.textContent = allFeeds.length;
+
+            let feedsHtml = `
+                <div class="feed-list-header">
+                    <div class="feed-header-col header-checkbox">Aktiv</div>
+                    <div class="feed-header-col header-podcast-name">Podcast-Name</div>
+                    <div class="feed-header-col header-rss-url">RSS-Adresse</div>
+                    <div class="feed-header-col header-topic">Thema</div>
+                    <div class="feed-header-col header-remove"></div>
+                </div>
+            `;
+
+            feedsHtml += allFeeds.map(feed => {
+                const isChecked = feed.is_active; 
+                const feedTopic = feed.topic || 'Klicken zum Bearbeiten';
+                const podcastName = feed.name || feed.url; 
+                const podcastLinkHtml = feed.homepage_url ? 
+                    `<a href="${feed.homepage_url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>` :
+                    `${highlightText(podcastName, currentSearchTerm)}`;
+
+
+                return `
+                    <div class="feed-item">
+                        <div class="feed-checkbox-container"> 
+                            <input type="checkbox" class="feed-checkbox" 
+                                   ${isChecked ? 'checked' : ''} 
+                                   onclick="toggleFeedActiveStatus(${feed.id}, this)">
                         </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">${new Date(episode.pub_date).toLocaleDateString()}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">${episode.host || 'N/A'}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button class="favorite-btn" data-id="${episode.id}" data-favorite="${episode.is_favorite}">
-                            <svg class="w-5 h-5 ${episode.is_favorite ? 'text-yellow-400' : 'text-gray-400'} hover:text-yellow-500 transition duration-150 ease-in-out" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.92 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"></path>
-                            </svg>
-                        </button>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button class="edit-episode-btn text-indigo-600 hover:text-indigo-900 mr-2" data-id="${episode.id}">Bearbeiten</button>
-                        <button class="delete-episode-btn text-red-600 hover:text-red-900" data-id="${episode.id}">Löschen</button>
-                    </td>
-                `;
-                episodesTableBody.appendChild(row);
-            });
+                    <div class="feed-podcast-name" title="${podcastName}">${podcastLinkHtml}</div>
+                    <div class="feed-url" title="${feed.url}">${feed.url}</div>
+                    <span class="editable feed-topic" onclick="makeEditableFeedTopic(this, ${feed.id})">${highlightText(feedTopic, currentSearchTerm)}</span>
+                    <button class="remove-feed" onclick="removeFeed(${feed.id})">Entfernen</button>
+                </div>
+            `;
+        }).join('');
 
-            attachEpisodeEventListeners(); // Event-Listener nach dem Rendern anhängen
+        feedsContent.innerHTML = feedsHtml;
+
+        if (!feedsCollapsed) {
+            feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+        }
+    }
+
+    function toggleFeedsList() {
+        const feedsContent = document.getElementById('feedsContent');
+        const feedsToggle = document.getElementById('feedsToggle');
+        
+        feedsCollapsed = !feedsCollapsed;
+        
+        if (feedsCollapsed) {
+            feedsContent.style.maxHeight = '0';
+            feedsToggle.textContent = '►'; // Changed to right arrow
+            feedsToggle.classList.add('collapsed');
+        } else {
+            feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+            feedsToggle.textContent = '▼';
+            feedsToggle.classList.remove('collapsed');
+        }
+    }
+
+    async function toggleFeedActiveStatus(feedId, checkboxElement) {
+        const feed = allFeeds.find(f => f.id === feedId);
+        if (!feed) return;
+
+        const newActiveStatus = checkboxElement.checked; 
+        
+        showStatus('Aktualisiere Aktiv-Status...', 'loading');
+        const response = await fetchData(`/update_feed/${feedId}`, 'POST', { is_active: newActiveStatus }); // Changed to POST method to match backend route
+
+        if (response) {
+            feed.is_active = newActiveStatus; 
+            showStatus(`Feed-Status aktualisiert: ${newActiveStatus ? 'Aktiv' : 'Inaktiv'}`, 'success');
+            applyFilters(); // Re-apply filters to update episode list based on active status
+        } else { 
+            checkboxElement.checked = !newActiveStatus; // Status im UI zurücksetzen
+            showStatus(`Fehler beim Aktualisieren des Feed-Status.`, 'danger');
+        }
+    }
+
+    async function refreshFeedEpisodes(feedId) {
+        showStatus('Aktualisiere Episoden...', 'loading');
+        const response = await fetchData(`/update_feed/${feedId}`, 'POST'); // Changed to POST method to match backend route
+        if (response && response.message) {
+            showStatus(response.message, 'success');
+        } else if (response && response.error) {
+            showStatus(`Fehler beim Aktualisieren der Episoden: ${response.error}`, 'danger');
+        } else {
+            showStatus('Unbekannter Fehler beim Aktualisieren der Episoden', 'danger');
+        }
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'Unbekannt';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Unbekannt';
+            
+            return date.toLocaleDateString('de-DE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        } catch (error) {
+            return 'Unbekannt';
+        }
+    }
+
+    function highlightText(text, searchTerm) {
+        if (!searchTerm) return text;
+        
+        const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function searchEpisodes(searchTerm, episodes) {
+        if (!searchTerm) {
+            return [...episodes];
         }
 
-        // Event-Listener für Episode-Buttons
-        function attachEpisodeEventListeners() {
-            document.querySelectorAll('.favorite-btn').forEach(button => {
-                button.onclick = async () => {
-                    const episodeId = button.dataset.id;
-                    const isFavorite = button.dataset.favorite === 'true';
-                    const response = await fetchData(`/update_episode/${episodeId}`, 'PUT', { is_favorite: !isFavorite });
-                    if (response && response.message) {
-                        showStatus(response.message, 'success');
-                        await loadDataFromBackend(); // Daten nach Aktualisierung neu laden
-                    } else {
-                        showStatus(response.error || 'Fehler beim Aktualisieren des Favoritenstatus.', 'error');
-                    }
-                };
-            });
+        const term = searchTerm.toLowerCase();
+        return episodes.filter(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            // Changed: Use podcast_name from backend, fallback to feed.name or feed.url
+            const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
+            const topic = feed ? feed.topic : '';
 
-            document.querySelectorAll('.edit-episode-btn').forEach(button => {
-                button.onclick = (event) => {
-                    const episodeId = button.dataset.id;
-                    // Implementiere hier die Logik zum Bearbeiten, z.B. ein Modal öffnen
-                    showStatus(`Bearbeitungsfunktion für Episode ${episodeId} wird noch implementiert.`, 'info');
-                };
-            });
+            return podcastName.toLowerCase().includes(term) ||
+                   episode.title.toLowerCase().includes(term) ||
+                   episode.description.toLowerCase().includes(term) ||
+                   topic.toLowerCase().includes(term) ||
+                   (episode.host && episode.host.toLowerCase().includes(term)); 
+        });
+    }
 
-            document.querySelectorAll('.delete-episode-btn').forEach(button => {
-                button.onclick = async () => {
-                    const episodeId = button.dataset.id;
-                    showConfirmModal('Möchten Sie diese Episode wirklich löschen?', async () => {
-                        const response = await fetchData(`/delete_episode/${episodeId}`, 'DELETE');
-                        if (response && response.message) {
-                            showStatus(response.message, 'success');
-                            await loadDataFromBackend(); // Daten nach Löschen neu laden
-                        } else {
-                            showStatus(response.error || 'Fehler beim Löschen der Episode.', 'error');
+    function applyTimeFilter(episodes) {
+        const timeFilter = document.getElementById('timeFilter').value;
+        if (timeFilter === 'all') return episodes;
+
+        const now = new Date();
+        const filterDate = new Date();
+
+        switch (timeFilter) {
+            case 'week':
+                filterDate.setDate(now.getDate() - 7);
+                break;
+            case 'month':
+                filterDate.setMonth(now.getMonth() - 1);
+                break;
+            case 'quarter':
+                filterDate.setMonth(now.getMonth() - 3);
+                break;
+            case 'year':
+                filterDate.setFullYear(now.getFullYear() - 1);
+                break;
+        }
+
+        return episodes.filter(episode => {
+            const episodeDate = new Date(episode.pub_date); 
+            return episodeDate >= filterDate;
+        });
+    }
+
+    function applyCountFilter(episodes) {
+        const countFilter = document.getElementById('countFilter').value;
+        if (countFilter === 'all') return episodes;
+
+        const count = parseInt(countFilter);
+        return episodes.slice(0, count);
+    }
+
+    function applyFilters() {
+        const searchInput = document.getElementById('searchInput');
+        currentSearchTerm = searchInput.value.trim();
+        
+        let episodes = [...allEpisodes];
+        
+        episodes = episodes.filter(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            return feed && feed.is_active; // Filter only active feeds
+        });
+
+        episodes = searchEpisodes(currentSearchTerm, episodes);
+        
+        episodes = [...episodes].sort((a, b) => {
+            const dateA = new Date(a.pub_date);
+            const dateB = new Date(b.pub_date);
+            return dateB - dateA;
+        });
+        
+        episodes = applyTimeFilter(episodes);
+        
+        episodes = applyCountFilter(episodes);
+        
+        filteredEpisodes = episodes;
+        updateTable();
+        updateSearchStats();
+    }
+
+    function updateSearchStats() {
+        const statsElement = document.getElementById('searchStats');
+        
+        if (currentSearchTerm) {
+            const totalEpisodes = allEpisodes.length;
+            const filteredCount = filteredEpisodes.length;
+            statsElement.textContent = `${filteredCount} von ${totalEpisodes} Episoden gefunden für "${currentSearchTerm}"`;
+            statsElement.classList.add('active');
+        } else {
+            statsElement.classList.remove('active');
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        currentSearchTerm = '';
+        applyFilters();
+    }
+
+    async function makeEditableFeedTopic(element, feedId) {
+        const feed = allFeeds.find(f => f.id === feedId);
+        if (!feed) return;
+
+        const currentValue = feed.topic || '';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentValue;
+        input.className = 'editable-input';
+        
+        element.innerHTML = '';
+        element.appendChild(input);
+        element.classList.add('editing');
+        
+        input.focus();
+        input.select();
+        
+        function saveEdit() {
+            const newValue = input.value.trim();
+            if (newValue !== currentValue) {
+                showStatus('Aktualisiere Thema...', 'loading');
+                fetchData(`/feeds/${feedId}`, 'PUT', { topic: newValue }) 
+                    .then(response => {
+                        if (response) {
+                            showStatus('Thema aktualisiert', 'success');
+                            loadDataFromBackend(); 
+                        } else { 
+                            showStatus(`Fehler beim Aktualisieren des Themas.`, 'danger');
                         }
                     });
-                };
-            });
+            }
+            element.textContent = newValue || 'Klicken zum Bearbeiten'; 
+            element.classList.remove('editing');
+        }
+        
+        input.addEventListener('blur', saveEdit);
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                saveEdit();
+            }
+        });
+    }
+
+    async function toggleFavorite(episodeId, starElement) {
+        const episode = allEpisodes.find(ep => ep.id === episodeId);
+        if (!episode) return;
+
+        const newFavoriteStatus = !episode.is_favorite;
+        
+        showStatus('Aktualisiere Favoritenstatus...', 'loading');
+        const response = await fetchData(`/episodes/${episode.id}`, 'PUT', { is_favorite: newFavoriteStatus }); 
+
+        if (response) {
+            episode.is_favorite = newFavoriteStatus;
+            
+            if (newFavoriteStatus) {
+                starElement.textContent = '⭐';
+                starElement.className = 'favorite-star active';
+            } else {
+                starElement.textContent = '☆';
+                starElement.className = 'favorite-star inactive';
+            }
+            showStatus('Favoritenstatus aktualisiert', 'success');
+        } else {
+            // Revert UI if API call failed
+            starElement.textContent = episode.is_favorite ? '⭐' : '☆';
+            starElement.className = `favorite-star ${episode.is_favorite ? 'active' : 'inactive'}`;
+            showStatus(`Fehler beim Aktualisieren des Favoritenstatus.`, 'danger'); 
+        }
+    }
+
+    function updateTable() {
+        const tbody = document.getElementById('episodeTableBody');
+        
+        if (filteredEpisodes.length === 0) {
+            if (currentSearchTerm) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-results">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <h3>Keine Ergebnisse gefunden</h3>
+                            <p>Keine Episoden entsprechen den Suchkriterien "${currentSearchTerm}"</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                        </svg>
+                            <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
+                            <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
+                        </td>
+                    </tr>
+                `;
+            }
+            return;
         }
 
-        // XLSX Import Handler
-        function handleXLSXImport(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                return;
-            }
+        tbody.innerHTML = filteredEpisodes.map(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            // Use episode.podcast_name from backend, fallback to feed.name or feed.url
+            const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
+            const host = episode.host || 'N/A'; 
+            
+            // Episode Title linking
+            const episodeTitleLinkHtml = episode.url ?
+                `<a href="${episode.url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${highlightText(episode.title, currentSearchTerm)}</a>` :
+                `${highlightText(episode.title, currentSearchTerm)}`;
 
-            const reader = new FileReader();
-            reader.onload = async (e) => {
+            return `
+                <tr>
+                    <td class="podcast-name" title="${podcastName}">${highlightText(podcastName, currentSearchTerm)}</td>
+                    <td class="episode-title" title="${episode.title}">${episodeTitleLinkHtml}</td>
+                    <td class="date">${formatDate(episode.pub_date)}</td>
+                    <td class="host" title="${host}">${highlightText(host, currentSearchTerm)}</td>
+                    <td>
+                        <span class="favorite-star ${episode.is_favorite ? 'active' : 'inactive'}" 
+                              onclick="toggleFavorite(${episode.id}, this)">
+                            ${episode.is_favorite ? '⭐' : '☆'}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function refreshAll() {
+        showStatus('Aktualisiere alle aktiven Feeds...', 'loading');
+        
+        const activeFeeds = allFeeds.filter(feed => feed.is_active);
+        // Promise.allSettled verwenden, um auch bei Fehlern einzelner Feeds fortzufahren
+        const results = await Promise.allSettled(activeFeeds.map(feed => fetchData(`/update_feed/${feed.id}`, 'POST'))); 
+        
+        let successCount = 0;
+        let errorCount = 0;
+        results.forEach(result => {
+            if (result.status === 'fulfilled' && result.value && result.value.message) {
+                successCount++;
+            } else {
+                errorCount++;
+                console.error("Fehler beim Aktualisieren eines Feeds:", result.reason || result.value);
+            }
+        });
+
+        await loadDataFromBackend(); 
+        if (errorCount === 0) {
+            showStatus(`Alle ${successCount} aktiven Feeds erfolgreich aktualisiert`, 'success');
+        } else {
+            showStatus(`${successCount} Feeds aktualisiert, ${errorCount} Fehler aufgetreten.`, 'warning');
+        }
+    }
+
+    function exportToXLSX() {
+        if (filteredEpisodes.length === 0) {
+            showStatus('Keine Episoden zum Exportieren vorhanden', 'warning');
+            return;
+        }
+
+        const episodesToExport = filteredEpisodes;
+        
+        const exportData = episodesToExport.map(episode => {
+            const feed = allFeeds.find(f => f.id === episode.feed_id);
+            const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
+            const feedTopic = feed ? feed.topic : '';
+            const host = episode.host || 'N/A'; 
+
+            return {
+                'Podcast-Name': podcastName, // Changed column name to Podcast-Name for consistency
+                'Episode': episode.title,
+                'Datum': formatDate(episode.pub_date),
+                'Host': host,
+                'Thema': feedTopic,
+                'Favorit': episode.is_favorite ? 'Ja' : 'Nein'
+            };
+        });
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        
+        const colWidths = [
+            { wch: 32 }, // Podcast-Name
+            { wch: 50 }, // Episode
+            { wch: 12 }, // Datum
+            { wch: 20 }, // Host
+            { wch: 30 }, // Thema
+            { wch: 10 }  // Favorit
+        ];
+        ws['!cols'] = colWidths;
+        
+        XLSX.utils.book_append_sheet(wb, ws, 'Podcast Episodes');
+        
+        const fileName = `podcast_episodes_${new Date().toISOString().split('T')[0]}.xlsx`;
+        
+        XLSX.writeFile(wb, fileName);
+
+        showStatus(`${episodesToExport.length} Episoden als XLSX exportiert`, 'success');
+    }
+
+    async function importFeedsFromXLSX(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            showStatus('Keine Datei ausgewählt.', 'warning');
+            return;
+        }
+
+        showStatus('Importiere Feeds aus XLSX...', 'loading');
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                // header: 1, um die erste Zeile als Header zu verwenden
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
 
-                if (json.length < 2) {
-                    showStatus('XLSX-Datei ist leer oder hat keine Header-Zeile.', 'error');
-                    return;
-                }
-
+                // Annahme, dass die erste Zeile die Header sind
                 const headers = json[0];
-                const rssUrlCol = headers.indexOf('RSS Feed URL');
-                const topicCol = headers.indexOf('Topic');
-                const isActiveCol = headers.indexOf('Is Active');
-
-                if (rssUrlCol === -1) {
-                    showStatus('XLSX-Datei muss eine Spalte "RSS Feed URL" enthalten.', 'error');
-                    return;
-                }
+                const rows = json.slice(1); // Die eigentlichen Datenzeilen
 
                 const feedsToImport = [];
-                json.slice(1).forEach(row => {
-                    const rssUrl = row[rssUrlCol];
-                    const podcastTopic = topicCol !== -1 ? row[topicCol] : null;
-                    const isActive = isActiveCol !== -1 ? (row[isActiveCol] === 'Yes' || row[isActiveCol] === 'yes' || row[isActiveCol] === true) : true;
+                rows.forEach(rowArray => {
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = rowArray[index];
+                    });
 
-                    if (rssUrl && (rssUrl.startsWith('http://') || rssUrl.startsWith('https://'))) {
+                    // Sicherstellen, dass die Spaltennamen korrekt sind und die Daten sauber extrahiert werden
+                    // Zugriff über die tatsächlichen Spaltennamen aus der XLSX-Datei
+                    const rssUrl = row['RSS-Adresse']; 
+                    const podcastName = row['Podcast-Name'] || null; 
+                    const podcastTopic = row['Thema'] || null; 
+                    // Konvertierung von 'aktiv' Spalte: Excel kann TRUE/FALSE oder 1/0 zurückgeben
+                    const isActive = (row['aktiv'] === true || String(row['aktiv']).toUpperCase() === 'TRUE' || row['aktiv'] === 1); 
+
+                    if (rssUrl && isValidUrl(rssUrl)) {
                         feedsToImport.push({
                             url: rssUrl,
+                            name: podcastName,
                             topic: podcastTopic,
                             is_active: isActive 
                         });
@@ -721,18 +1535,19 @@
                 });
 
                 if (feedsToImport.length === 0) {
-                    showStatus('Keine gültigen Feeds in der XLSX-Datei gefunden.', 'error');
+                    showStatus('Keine gültigen Feeds in der XLSX-Datei gefunden.', 'warning');
                     return;
                 }
 
+                // Changed to use /import_feeds_xlsx endpoint which handles parsing and saving
                 const response = await fetchData('/import_feeds_xlsx', 'POST', feedsToImport);
 
                 if (response && response.message) {
                     showStatus(response.message, 'success');
                     await loadDataFromBackend(); 
                 } else {
-                    // NEU: Zeige detailliertere Fehlermeldungen vom Backend
-                    showStatus(`Fehler beim Importieren der XLSX-Feeds: ${response.error || 'Unbekannter Fehler'}`, 'error');
+                    // Zeige detailliertere Fehlermeldungen vom Backend
+                    showStatus(`Fehler beim Importieren der XLSX-Feeds: ${response.error || 'Unbekannter Fehler'}`, 'danger');
                     if (response && response.errors) {
                         response.errors.forEach(err => console.error("Import Fehler:", err));
                     }
@@ -740,34 +1555,11 @@
 
             } catch (error) {
                 console.error('Fehler beim Importieren der XLSX-Feeds:', error);
-                showStatus(`Fehler beim Importieren der XLSX-Feeds: ${error.message}`, 'error');
+                showStatus(`Fehler beim Importieren der XLSX-Feeds: ${error.message}`, 'danger');
             }
         };
         reader.readAsArrayBuffer(file);
     }
-
-    // Confirmation Modal Logic
-    let confirmCallback = null;
-
-    function showConfirmModal(message, callback) {
-        document.getElementById('modalMessage').textContent = message;
-        document.getElementById('confirmationModal').classList.remove('hidden');
-        confirmCallback = callback;
-    }
-
-    document.getElementById('confirmYes').addEventListener('click', () => {
-        document.getElementById('confirmationModal').classList.add('hidden');
-        if (confirmCallback) {
-            confirmCallback();
-            confirmCallback = null; // Callback zurücksetzen
-        }
-    });
-
-    document.getElementById('confirmNo').addEventListener('click', () => {
-        document.getElementById('confirmationModal').classList.add('hidden');
-        confirmCallback = null; // Callback zurücksetzen
-    });
-
-    </script>
+</script>
 </body>
 </html>
