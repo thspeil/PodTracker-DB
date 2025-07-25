@@ -423,11 +423,11 @@
         }
         
         .feed-header-col.header-remove {
-            flex-basis: 80px; 
-            flex-grow: 0; 
-            text-align: center;
-            display: flex; 
-            justify-content: center; 
+            flex: 0 0 80px; /* Feste Breite für den Header */
+            text-align: right; /* Rechtsbündig ausrichten */
+            display: flex;
+            justify-content: flex-end; /* Inhalt am Ende ausrichten */
+            align-items: center;
         }
 
         .feed-item {
@@ -447,8 +447,10 @@
         .remove-feed {
             padding: 3px 6px;
             font-size: 13px;
+            flex-shrink: 0; /* Nicht schrumpfen lassen */
+            /* KORRIGIERT: flex-basis und margin-left für Rechtsausrichtung im Item */
             flex-basis: 80px; 
-            flex-grow: 0;
+            margin-left: auto; /* Schiebt den Button nach rechts */
             @apply bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-150 ease-in-out;
         }
 

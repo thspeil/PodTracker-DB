@@ -128,7 +128,8 @@ def parse_rss_feed(feed_url):
         namespaces = {
             'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd', 
             'googleplay': 'http://www.google.com/schemas/play-podcasts/1.0',
-            'atom': 'http://www.w3.org/2005/Atom'
+            'atom': 'http://www.w3.org/2005/Atom',
+            'dc': 'http://purl.org/dc/elements/1.1/' # Hinzugefügt für Dublin Core Creator
         }
 
         feed_data = {}
@@ -181,14 +182,18 @@ def parse_rss_feed(feed_url):
                 if url_elem is None:
                     url_elem = item.find('link') 
 
-                host_elem = item.find('itunes:author', namespaces) or item.find('author')
+                # KORREKTUR: Host/Author Parsing verbessert
+                host_elem = item.find('itunes:author', namespaces) or \
+                            item.find('author') or \
+                            item.find('dc:creator', namespaces) # Versuche dc:creator
+
                 
                 episode_url = None
                 if url_elem is not None:
                     if 'url' in url_elem.attrib: # Für <enclosure url="...">
                         episode_url = url_elem.attrib['url']
                     elif url_elem.text and (url_elem.text.startswith('http://') or url_elem.text.startswith('https://')): # Für <link>text</link>
-                        episode_url = url_elem.text
+                        episode_url = url.text
 
                 # Überprüfe, ob episode_url ein valider Link ist (kann auch nur ein HTML-Link sein)
                 if episode_url and not (episode_url.startswith('http://') or episode_url.startswith('https://')):
