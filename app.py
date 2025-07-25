@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template, send_from_directory, flash, redirect, url_for # Hinzugefügt: redirect, url_for
+from flask import Flask, request, jsonify, render_template, send_from_directory, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -19,318 +19,417 @@ app = Flask(__name__, static_folder='static', template_folder='.')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FLASK_LOGIN', 'your_super_secret_key_that_you_must_change_in_production')
 # Korrektur: basedir definieren
-basedir = os.path.abspath(os.path.dirname(__file__)) # Korrektur: basedir definieren
+basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'podcast_tracker.db'))
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Deaktiviert Warnungen zur Änderungsverfolgung
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(minutes=20) # Session-Dauer für Flask-Login
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Deaktiviert Warnungen zur Objektmodifikation
+
 
 db = SQLAlchemy(app)
+CORS(app) # Ermöglicht Cross-Origin Requests
 
+# Flask-Login initialisieren
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Name deiner Login-Route
-login_manager.login_message = "Bitte melden Sie sich an, um diese Seite zu sehen."
-login_manager.login_message_category = "warning"
+login_manager.login_view = 'login' # Name der Login-Route
 
-# Benutzer-Modell für Flask-Login
-class User(UserMixin):
-    def __init__(self, id, username, password_hash):
-        self.id = id
-        self.username = username
-        self.password_hash = password_hash
+# Dummy User-Klasse für Flask-Login
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(120), nullable=False)
 
-    @staticmethod
-    def get_user_by_username(username):
-        # Hier würdest du später deinen Benutzernamen aus der Datenbank abfragen.
-        # Für den Anfang definieren wir einen festen Test-Benutzer:
-        if username == "user1":
-            # ACHTUNG: Ersetze diesen Hash durch den Hash deines Passworts "SpeilPW"
-            # Generiere diesen Hash einmalig mit: from werkzeug.security import generate_password_hash; print(generate_password_hash("SpeilPW"))
-            hashed_pw_for_user1 = """scrypt:32768:8:1$anilOJC7MTH87cwT$624d07e2737d25657bff2e6d516bd38cdee48729cd9421b22b8f6a30f3e49a3627e3a334718f84216a6698bf0c55a21043f63fe4c73c9007ae212d6d657929d3"""
-            return User(id=1, username="user1", password_hash=hashed_pw_for_user1)
-        return None
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-    def get_id(self):
-        return str(self.id)
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Diese Funktion wird von Flask-Login verwendet, um den Benutzer anhand der ID zu laden.
-    if user_id == '1':
-        # Stelle sicher, dass der Hash hier wieder zum oben definierten User passt.
-        hashed_pw_for_user1 = """scrypt:32768:8:1$anilOJC7MTH87cwT$624d07e2737d25657bff2e6d516bd38cdee48729cd9421b22b8f6a30f3e49a3627e3a334718f84216a6698bf0c55a21043f63fe4c73c9007ae212d6d657929d3"""
-        return User(id=1, username="user1", password_hash=hashed_pw_for_user1)
-    return None
+    return User.query.get(int(user_id))
 
-# CORS für alle Routen aktivieren (für Entwicklung).
-# In einer Produktionsumgebung sollte dies auf spezifische Ursprünge beschränkt werden.
-CORS(app)
+# Erstelle einen Standardbenutzer, falls keiner existiert (NUR FÜR ENTWICKLUNG/TESTZWECKE)
+@app.before_request
+def create_default_user():
+    with app.app_context():
+        if User.query.filter_by(username='user1').first() is None:
+            user = User(username='user1')
+            user.set_password('password123') # BITTE IN PRODUKTION ÄNDERN!
+            db.session.add(user)
+            db.session.commit()
+            print("Default user 'user1' created.")
 
-# Definition des Datenmodells für Podcast-Feeds
+
+# Datenbankmodelle
 class PodcastFeed(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(500), unique=True, nullable=False)
-    name = db.Column(db.String(255))
+    name = db.Column(db.String(255), nullable=False)
     topic = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True)
-    last_checked = db.Column(db.DateTime, default=datetime.utcnow)
-    homepage_url = db.Column(db.String(500)) 
+    last_checked = db.Column(db.DateTime, default=datetime.now)
+    homepage_url = db.Column(db.String(500)) # Neues Feld für Homepage URL
+
     episodes = db.relationship('Episode', backref='feed', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f'<PodcastFeed {self.url}>'
+        return f'<PodcastFeed {self.name}>'
 
-# Definition des Datenmodells für Episoden
 class Episode(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     feed_id = db.Column(db.Integer, db.ForeignKey('podcast_feed.id'), nullable=False)
     title = db.Column(db.String(500), nullable=False)
     description = db.Column(db.Text)
-    pub_date = db.Column(db.DateTime)
-    url = db.Column(db.String(500), unique=True, nullable=False)
+    pub_date = db.Column(db.DateTime, nullable=False)
+    url = db.Column(db.String(500))
     is_favorite = db.Column(db.Boolean, default=False)
     host = db.Column(db.String(255))
 
     def __repr__(self):
         return f'<Episode {self.title}>'
 
-# Hilfsfunktion zum Parsen von RSS-Feeds
+# Hilfsfunktion zum Parsen von Datumsstrings
+def parse_date(date_string):
+    formats = [
+        "%a, %d %b %Y %H:%M:%S %Z",  # RFC 2822 (most common for RSS)
+        "%a, %d %b %Y %H:%M:%S %z",  # RFC 2822 with UTC offset
+        "%Y-%m-%dT%H:%M:%S%Z",      # ISO 8601 (often for Atom feeds)
+        "%Y-%m-%dT%H:%M:%S.%fZ",    # ISO 8601 with milliseconds and 'Z' for UTC
+        "%Y-%m-%d %H:%M:%S",        # Common SQL format
+        "%a, %d %b %Y %H:%M:%S %z", # Sometimes timezone is like -0000
+        "%a, %d %b %Y %H:%M:%S GMT", # Specific GMT
+        "%Y-%m-%dT%H:%M:%S",        # ISO 8601 without timezone
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_string, fmt)
+        except ValueError:
+            continue
+    print(f"Warnung: Datum '{date_string}' konnte nicht geparst werden.")
+    return datetime.now() # Fallback auf aktuelle Zeit, wenn Parsen fehlschlägt
+
 def parse_rss_feed(feed_url):
     """
-    Ruft einen RSS-Feed ab und parst ihn, um Episodendaten und die Homepage-URL zu extrahieren.
+    Parst einen RSS- oder Atom-Feed und gibt Feed- und Episodendaten zurück.
     """
     try:
-        response = requests.get(feed_url, timeout=10)
-        response.raise_for_status() # Löst einen HTTPError für schlechte Antworten (4xx oder 5xx) aus
+        response = requests.get(feed_url, timeout=10) # Timeout hinzugefügt
+        response.raise_for_status() # Löst HTTPError für schlechte Antworten (4xx oder 5xx) aus
         
-        # XML-Inhalt parsen
+        # Versuche, den XML-Baum zu parsen
         root = ET.fromstring(response.content)
         
-        episodes_data = []
-        # Namespace für iTunes-Tags
-        itunes_ns = {'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd'}
+        # Namespaces für RSS, iTunes und Atom
+        namespaces = {
+            'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd', 
+            'googleplay': 'http://www.google.com/schemas/play-podcasts/1.0',
+            'atom': 'http://www.w3.org/2005/Atom'
+        }
 
-        # Homepage URL extrahieren (oft im <channel><link> Tag)
-        homepage_url = None
-        channel_link = root.find('.//channel/link')
-        if channel_link is not None and channel_link.text:
-            homepage_url = channel_link.text
-            # Basic validation to ensure it looks like a URL
-            if not homepage_url.startswith(('http://', 'https://')):
-                homepage_url = None # Invalid URL, ignore
+        feed_data = {}
+        episodes = []
 
-        # Finde alle 'item'-Elemente im RSS-Feed (Episoden)
-        for item in root.findall('.//item'):
-            title = item.find('title').text if item.find('title') is not None else 'No Title'
-            description = item.find('description').text if item.find('description') is not None else 'No Description'
-            pub_date_str = item.find('pubDate').text if item.find('pubDate') is not None else None
+        # Prüfen, ob es sich um einen RSS-Feed handelt (hat ein 'channel'-Element)
+        if root.find('channel') is not None:
+            channel = root.find('channel')
+            # RSS Feed Parsing
+            feed_data['name'] = channel.find('title').text if channel.find('title') is not None else 'Unbekannter Podcast'
             
-            # Versuche, die Episode-URL zu finden (entweder enclosure url oder link)
-            episode_url = None
-            enclosure = item.find('enclosure')
-            if enclosure is not None and 'url' in enclosure.attrib:
-                episode_url = enclosure.attrib['url']
-            elif item.find('link') is not None:
-                episode_url = item.find('link').text
+            # Homepage URL: Priorisiere itunes:new-feed-url, dann atom:link rel="alternate", dann channel/link
+            homepage_url = None
+            itunes_link = channel.find('itunes:new-feed-url', namespaces)
+            if itunes_link is not None and itunes_link.text:
+                homepage_url = itunes_link.text
+            else:
+                atom_link = channel.find('atom:link[@rel="alternate"]', namespaces)
+                if atom_link is not None and 'href' in atom_link.attrib:
+                    homepage_url = atom_link.attrib['href']
+                else:
+                    link = channel.find('link')
+                    if link is not None:
+                        # Einige Feeds haben Link als Attribut, andere als Text
+                        homepage_url = link.text if link.text else link.attrib.get('href')
 
-            # Host/Autor extrahieren
-            host = None
-            # Versuche itunes:author
-            itunes_author = item.find('itunes:author', itunes_ns)
-            if itunes_author is not None:
-                host = itunes_author.text
-            # Fallback auf Standard-Author-Tag
-            elif item.find('author') is not None:
-                host = item.find('author').text
+            # Validiere die homepage_url
+            if homepage_url and not (homepage_url.startswith('http://') or homepage_url.startswith('https://')):
+                homepage_url = None # Setze ungültige URLs auf None
+            feed_data['homepage_url'] = homepage_url
 
-            pub_date = None
-            if pub_date_str:
-                try:
-                    # Versuche, Datumsformate zu parsen (RFC 822 ist üblich für RSS)
-                    pub_date = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M:%S %Z')
-                except ValueError:
-                    try:
-                        # Versuche ein alternatives Format, falls das erste fehlschlägt
-                        pub_date = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M:%S %z') # Mit UTC-Offset
-                    except ValueError:
-                        # Fallback auf ein allgemeineres Format, wenn andere fehlschlagen
-                        try:
-                            # Handle cases like "Mon, 01 Jan 2024 00:00:00 GMT" or "2024-01-01T00:00:00Z"
-                            # This is a very broad attempt, a robust solution would use dateutil.parser
-                            pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
-                        except ValueError:
-                            print(f"Warnung: Datum konnte nicht geparst werden: {pub_date_str}")
-                            pass # Datum bleibt None, wenn Parsen fehlschlägt
+            # Den Topic aus verschiedenen möglichen Tags lesen
+            topic = None
+            category_elem = channel.find('category')
+            if category_elem is not None and category_elem.text:
+                topic = category_elem.text
+            else:
+                itunes_category_elem = channel.find('itunes:category', namespaces)
+                if itunes_category_elem is not None:
+                    topic = itunes_category_elem.attrib.get('text')
+            feed_data['topic'] = topic
 
-            if episode_url: # Nur Episoden mit einer URL hinzufügen
-                episodes_data.append({
-                    'title': title,
-                    'description': description,
-                    'pub_date': pub_date,
+            for item in channel.findall('item'):
+                title_elem = item.find('title')
+                description_elem = item.find('description')
+                pub_date_elem = item.find('pubDate')
+                url_elem = item.find('enclosure') # enclosure-Tag für die Mediendatei-URL
+                
+                # Alternative: direkter Link aus dem item
+                if url_elem is None:
+                    url_elem = item.find('link') 
+
+                host_elem = item.find('itunes:author', namespaces) or item.find('author')
+                
+                episode_url = None
+                if url_elem is not None:
+                    if 'url' in url_elem.attrib: # Für <enclosure url="...">
+                        episode_url = url_elem.attrib['url']
+                    elif url_elem.text and (url_elem.text.startswith('http://') or url_elem.text.startswith('https://')): # Für <link>text</link>
+                        episode_url = url_elem.text
+
+                # Überprüfe, ob episode_url ein valider Link ist (kann auch nur ein HTML-Link sein)
+                if episode_url and not (episode_url.startswith('http://') or episode_url.startswith('https://')):
+                    episode_url = None # Setze ungültige URLs auf None
+
+                episodes.append({
+                    'title': title_elem.text if title_elem is not None else 'Unbekannter Titel',
+                    'description': description_elem.text if description_elem is not None else '',
+                    'pub_date': parse_date(pub_date_elem.text) if pub_date_elem is not None else datetime.now(),
                     'url': episode_url,
-                    'host': host
+                    'host': host_elem.text if host_elem is not None else 'Unbekannter Host'
                 })
-        return episodes_data, homepage_url # Gebe Homepage-URL zurück
+        
+        # Prüfen, ob es sich um einen Atom-Feed handelt (hat ein 'feed'-Element als root)
+        elif root.tag == '{http://www.w3.org/2005/Atom}feed':
+            # Atom Feed
+            feed_data['name'] = root.find('{http://www.w3.org/2005/Atom}title', namespaces).text if root.find('{http://www.w3.org/2005/Atom}title', namespaces) is not None else 'Unbekannter Atom Feed'
+            feed_data['homepage_url'] = root.find('{http://www.w3.org/2005/Atom}link[@rel="alternate"]', namespaces).attrib['href'] if root.find('{http://www.w3.org/2005/Atom}link[@rel="alternate"]', namespaces) is not None else None
+            feed_data['topic'] = None # Atom hat kein direktes "topic" Feld
+
+            for item in root.findall('{http://www.w3.org/2005/Atom}entry', namespaces):
+                title_elem = item.find('{http://www.w3.org/2005/Atom}title', namespaces)
+                description_elem = item.find('{http://www.w3.org/2005/Atom}summary', namespaces) or item.find('{http://www.w3.org/2005/Atom}content', namespaces)
+                pub_date_elem = item.find('{http://www.w3.org/2005/Atom}published', namespaces)
+                url_elem = item.find('{http://www.w3.org/2005/Atom}link[@rel="enclosure"]', namespaces) or item.find('{http://www.w3.org/2005/Atom}link', namespaces)
+                author_elem = item.find('{http://www.w3.org/2005/Atom}author/{http://www.w3.org/2005/Atom}name', namespaces)
+
+                episode_url = url_elem.attrib['href'] if url_elem is not None and 'href' in url_elem.attrib else None
+                
+                if episode_url and not (episode_url.startswith('http://') or episode_url.startswith('https://')):
+                    episode_url = None # Setze ungültige URLs auf None
+
+                episodes.append({
+                    'title': title_elem.text if title_elem is not None else 'Unbekannter Titel',
+                    'description': description_elem.text if description_elem is not None else '',
+                    'pub_date': parse_date(pub_date_elem.text) if pub_date_elem is not None else datetime.now(),
+                    'url': episode_url,
+                    'host': author_elem.text if author_elem is not None else 'Unbekannter Host'
+                })
+        else:
+            raise ValueError("Ungültiges Feed-Format: Weder RSS-Channel noch Atom-Feed gefunden.")
+
+        return feed_data, episodes
+
     except requests.exceptions.RequestException as e:
-        print(f"Fehler beim Abrufen des Feeds {feed_url}: {e}")
+        print(f"Netzwerkfehler beim Abrufen des RSS-Feeds {feed_url}: {e}")
         return None, None
     except ET.ParseError as e:
-        print(f"Fehler beim Parsen des XML-Feeds {feed_url}: {e}")
+        print(f"Fehler beim Parsen des RSS-Feeds {feed_url}: {e}")
         return None, None
     except Exception as e:
-        print(f"Ein unerwarteter Fehler ist aufgetreten: {e}")
+        print(f"Ein unerwarteter Fehler ist aufgetreten beim Parsen von {feed_url}: {e}")
         return None, None
 
-# API-Endpunkte
 
-# Route zum Servieren der Haupt-HTML-Datei (Frontend)
+# Routen
 @app.route('/')
 @login_required
-def serve_frontend():
-    return render_template('podcast_tracker-DB.html')
+def index():
+    return render_template('podcast_tracker-DB.html', username=current_user.username)
 
-# Routen für Login und Logout
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('serve_frontend')) # Wenn bereits eingeloggt, weiterleiten
+        return redirect(url_for('index'))
 
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = User.get_user_by_username(username) 
-        if user and check_password_hash(user.password_hash, password):
-            login_user(user, remember=True) # "Remember Me" aktivieren
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            login_user(user)
             flash('Erfolgreich eingeloggt!', 'success')
-            return redirect(url_for('serve_frontend'))
+            return redirect(url_for('index'))
         else:
             flash('Ungültiger Benutzername oder Passwort.', 'danger')
-    return render_template('login.html') 
+    return render_template('login.html') # Du musst eine login.html Datei erstellen
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('Erfolgreich ausgeloggt.', 'info')
+    flash('Sie wurden erfolgreich abgemeldet.', 'info')
     return redirect(url_for('login'))
 
-
-# Route für Impressum
-@app.route('/impressum')
-def impressum():
-    return render_template('Impressum.html')
-
-# Route für Datenschutz
-@app.route('/datenschutz')
-def datenschutz():
-    return render_template('Datenschutz.html')
-
-# NEU: Route zum Servieren des Favicons
+# Favicon-Route
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(app.static_folder, 'favicon.ico')
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'PTr-favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-# Feeds abrufen und hinzufügen
-@app.route('/feeds', methods=['GET', 'POST'])
+# API-Endpunkte
+@app.route('/feeds', methods=['GET'])
 @login_required
-def handle_feeds():
-    if request.method == 'POST':
-        data = request.json
-        if not data or not 'url' in data:
-            flash("URL für Feed fehlt", "danger")
-            return jsonify({"error": "URL für Feed fehlt"}), 400
+def get_feeds():
+    feeds = PodcastFeed.query.all()
+    # Füge die Anzahl der Episoden pro Feed hinzu
+    feeds_data = []
+    for feed in feeds:
+        episodes_count = Episode.query.filter_by(feed_id=feed.id).count()
+        feeds_data.append({
+            'id': feed.id,
+            'url': feed.url,
+            'name': feed.name,
+            'topic': feed.topic,
+            'is_active': feed.is_active,
+            'last_checked': feed.last_checked.isoformat(),
+            'homepage_url': feed.homepage_url,
+            'episodes_count': episodes_count
+        })
+    return jsonify(feeds_data)
 
-        feed_url = data['url']
-        topic = data.get('topic', None)
-        name = data.get('name', None)
-        is_active = data.get('is_active', True)
+@app.route('/episodes', methods=['GET'])
+@login_required
+def get_episodes():
+    episodes = db.session.query(Episode, PodcastFeed.name.label('podcast_name')).join(PodcastFeed).all()
+    episodes_data = [{
+        'id': ep.Episode.id,
+        'feed_id': ep.Episode.feed_id,
+        'title': ep.Episode.title,
+        'description': ep.Episode.description,
+        'pub_date': ep.Episode.pub_date.isoformat(),
+        'url': ep.Episode.url,
+        'is_favorite': ep.Episode.is_favorite,
+        'host': ep.Episode.host,
+        'podcast_name': ep.podcast_name # Füge den Podcast-Namen hinzu
+    } for ep in episodes]
+    return jsonify(episodes_data)
 
-        # NEU: Homepage URL extrahieren beim Hinzufügen
-        episodes_data, homepage_url = parse_rss_feed(feed_url)
-        if not episodes_data: # Wenn RSS-Feed nicht geparst werden kann
-            flash(f"Fehler beim Parsen des RSS-Feeds: {feed_url}", "danger")
-            return jsonify({"error": f"Fehler beim Parsen des RSS-Feeds: {feed_url}"}), 400
+@app.route('/add_feed', methods=['POST'])
+@login_required
+def add_feed():
+    data = request.json
+    feed_url = data.get('feed_url')
 
-        # Prüfen, ob Feed bereits existiert
-        existing_feed = PodcastFeed.query.filter_by(url=feed_url).first()
-        if existing_feed:
+    if not feed_url:
+        return jsonify({"error": "RSS Feed URL ist erforderlich."}), 400
+
+    # Prüfen, ob der Feed bereits existiert
+    existing_feed = PodcastFeed.query.filter_by(url=feed_url).first()
+    if existing_feed:
+        # Wenn der Feed existiert, aktualisiere ihn stattdessen
+        feed_data, episodes_data = parse_rss_feed(feed_url)
+        if feed_data:
             try:
-                # Wenn der Feed bereits existiert, aktualisiere Name, Thema, Aktiv-Status und Homepage URL
-                if name and not existing_feed.name:
-                    existing_feed.name = name
-                if topic and not existing_feed.topic:
-                    existing_feed.topic = topic
-                existing_feed.is_active = is_active
-                existing_feed.homepage_url = homepage_url # Homepage URL aktualisieren
+                existing_feed.name = feed_data.get('name', existing_feed.name)
+                existing_feed.topic = feed_data.get('topic', existing_feed.topic)
+                existing_feed.homepage_url = feed_data.get('homepage_url', existing_feed.homepage_url)
+                existing_feed.last_checked = datetime.now()
                 db.session.commit()
-                flash("Feed bereits vorhanden und aktualisiert", "info")
-                return jsonify({"message": "Feed bereits vorhanden und aktualisiert", "id": existing_feed.id, "url": existing_feed.url, "name": existing_feed.name, "topic": existing_feed.topic, "is_active": existing_feed.is_active, "homepage_url": existing_feed.homepage_url}), 200
+
+                # Bestehende Episoden für diesen Feed löschen, um Duplikate zu vermeiden
+                # Alternativ: Nur neue Episoden hinzufügen und alte aktualisieren/markieren
+                Episode.query.filter_by(feed_id=existing_feed.id).delete()
+                db.session.commit() # Commit, um Löschung zu persistieren
+
+                # Neue Episoden hinzufügen
+                for ep_data in episodes_data:
+                    ep_data['feed_id'] = existing_feed.id 
+                    ep_data.setdefault('is_favorite', False)
+                    episode = Episode(**ep_data)
+                    db.session.add(episode)
+                
+                db.session.commit()
+                
+                flash(f"Feed '{existing_feed.name}' und Episoden erfolgreich aktualisiert (existierte bereits)!", "success")
+                return jsonify({"message": f"Feed '{existing_feed.name}' und Episoden erfolgreich aktualisiert (existierte bereits)!"}), 200
             except Exception as e:
                 db.session.rollback()
-                flash(f"Fehler beim Aktualisieren des bestehenden Feeds: {str(e)}", "danger")
-                return jsonify({"error": f"Fehler beim Aktualisieren des bestehenden Feeds: {str(e)}"}), 500
+                flash(f"Fehler beim Aktualisieren des Feeds: {str(e)}", "danger")
+                return jsonify({"error": f"Fehler beim Aktualisieren des Feeds: {str(e)}"}), 500
+        else:
+            flash("Fehler beim Parsen des bestehenden RSS-Feeds oder ungültige URL.", "danger")
+            return jsonify({"error": "Fehler beim Parsen des bestehenden RSS-Feeds oder ungültige URL."}), 400
 
-        new_feed = PodcastFeed(url=feed_url, name=name, topic=topic, is_active=is_active, homepage_url=homepage_url) # Homepage URL speichern
-        db.session.add(new_feed)
+    feed_data, episodes_data = parse_rss_feed(feed_url)
+
+    if feed_data:
         try:
+            new_feed = PodcastFeed(
+                url=feed_url,
+                name=feed_data.get('name', 'Unbekannter Podcast'),
+                topic=feed_data.get('topic'),
+                is_active=True,
+                last_checked=datetime.now(),
+                homepage_url=feed_data.get('homepage_url')
+            )
+            db.session.add(new_feed)
             db.session.commit()
-            flash("Feed hinzugefügt", "success")
-            return jsonify({"message": "Feed hinzugefügt", "id": new_feed.id, "url": new_feed.url, "name": new_feed.name, "topic": new_feed.topic, "is_active": new_feed.is_active, "homepage_url": new_feed.homepage_url}), 201
-        except Exception as e:
-            db.session.rollback() 
-            flash(f"Fehler beim Hinzufügen des Feeds: {str(e)}", "danger")
-            print(f"Fehler beim Hinzufügen von Feed {feed_url}: {str(e)}")
-            return jsonify({"error": f"Fehler beim Hinzufügen des Feeds: {str(e)}"}), 500
-    
-    else: # GET-Anfrage
-        # NEU: Sortierung nach Thema und dann nach Name
-        feeds = PodcastFeed.query.order_by(
-            PodcastFeed.topic.asc(), 
-            PodcastFeed.name.asc()
-        ).all()
-        feeds_data = []
-        for feed in feeds:
-            feeds_data.append({
-                'id': feed.id,
-                'url': feed.url,
-                'name': feed.name,
-                'topic': feed.topic,
-                'is_active': feed.is_active,
-                'last_checked': feed.last_checked.isoformat() if feed.last_checked else None,
-                'homepage_url': feed.homepage_url # NEU: Homepage URL zurückgeben
-            })
-        return jsonify(feeds_data)
 
-# Feed aktualisieren (PUT)
-@app.route('/feeds/<int:feed_id>', methods=['PUT'])
+            for ep_data in episodes_data:
+                ep_data['feed_id'] = new_feed.id 
+                ep_data.setdefault('is_favorite', False)
+                episode = Episode(**ep_data)
+                db.session.add(episode)
+            
+            db.session.commit()
+            
+            flash(f"Feed '{new_feed.name}' und Episoden erfolgreich hinzugefügt!", "success")
+            return jsonify({"message": f"Feed '{new_feed.name}' und Episoden erfolgreich hinzugefügt!"}), 201
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Fehler beim Hinzufügen des Feeds: {str(e)}", "danger")
+            return jsonify({"error": f"Fehler beim Hinzufügen des Feeds: {str(e)}"}), 500
+    else:
+        flash("Fehler beim Parsen des RSS-Feeds oder ungültige URL.", "danger")
+        return jsonify({"error": "Fehler beim Parsen des RSS-Feeds oder ungültige URL."}), 400
+
+@app.route('/update_feed/<int:feed_id>', methods=['POST'])
 @login_required
 def update_feed(feed_id):
     feed = PodcastFeed.query.get_or_404(feed_id)
-    data = request.json
-    
-    try:
-        if 'url' in data:
-            feed.url = data['url']
-        if 'name' in data:
-            feed.name = data['name']
-        if 'topic' in data:
-            feed.topic = data['topic']
-        if 'is_active' in data:
-            feed.is_active = bool(data['is_active'])
-        # NEU: Homepage URL kann auch über PUT aktualisiert werden, falls nötig
-        if 'homepage_url' in data:
-            feed.homepage_url = data['homepage_url']
-        
-        db.session.commit()
-        flash("Feed aktualisiert", "success")
-        return jsonify({"message": "Feed aktualisiert", "id": feed.id, "url": feed.url, "name": feed.name, "topic": feed.topic, "is_active": feed.is_active, "homepage_url": feed.homepage_url}), 200
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Fehler beim Aktualisieren des Feeds: {str(e)}", "danger")
-        return jsonify({"error": f"Fehler beim Aktualisieren des Feeds: {str(e)}"}), 500
+    feed_url = feed.url
 
-# Feed löschen (DELETE)
-@app.route('/feeds/<int:feed_id>', methods=['DELETE'])
+    feed_data, episodes_data = parse_rss_feed(feed_url)
+
+    if feed_data:
+        try:
+            feed.name = feed_data.get('name', feed.name) # Update name if available
+            feed.topic = feed_data.get('topic', feed.topic)
+            feed.homepage_url = feed_data.get('homepage_url', feed.homepage_url)
+            feed.last_checked = datetime.now()
+            db.session.commit()
+
+            # Alle alten Episoden löschen und neue hinzufügen, um Duplikate zu vermeiden und Aktualität zu gewährleisten
+            Episode.query.filter_by(feed_id=feed.id).delete()
+            db.session.commit()
+
+            for ep_data in episodes_data:
+                ep_data['feed_id'] = feed.id
+                ep_data.setdefault('is_favorite', False)
+                episode = Episode(**ep_data)
+                db.session.add(episode)
+            
+            db.session.commit()
+            flash(f"Feed '{feed.name}' und Episoden erfolgreich aktualisiert!", "success")
+            return jsonify({"message": f"Feed '{feed.name}' und Episoden erfolgreich aktualisiert!"}), 200
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Fehler beim Aktualisieren des Feeds: {str(e)}", "danger")
+            return jsonify({"error": f"Fehler beim Aktualisieren des Feeds: {str(e)}"}), 500
+    else:
+        flash("Fehler beim Parsen des RSS-Feeds während der Aktualisierung.", "danger")
+        return jsonify({"error": "Fehler beim Parsen des RSS-Feeds während der Aktualisierung."}), 400
+
+@app.route('/delete_feed/<int:feed_id>', methods=['DELETE'])
 @login_required
 def delete_feed(feed_id):
     feed = PodcastFeed.query.get_or_404(feed_id)
@@ -344,234 +443,36 @@ def delete_feed(feed_id):
         flash(f"Fehler beim Löschen des Feeds: {str(e)}", "danger")
         return jsonify({"error": f"Fehler beim Löschen des Feeds: {str(e)}"}), 500
 
-
-# NEUER ENDPUNKT: Feeds aus XLSX importieren
-@app.route('/import_feeds_xlsx', methods=['POST'])
-@login_required
-def import_feeds_xlsx():
-    data = request.json
-    if not data or not isinstance(data, list):
-        flash("Ungültiges Datenformat. Erwartet wird eine Liste von Feeds.", "danger")
-        return jsonify({"error": "Ungültiges Datenformat. Erwartet wird eine Liste von Feeds."}), 400
-
-    imported_count = 0
-    updated_count = 0
-    errors = []
-    
-    feeds_to_refresh_ids = []
-
-    for feed_data in data:
-        feed_url = feed_data.get('url')
-        feed_name = feed_data.get('name')
-        feed_topic = feed_data.get('topic')
-        feed_is_active = feed_data.get('is_active', True)
-
-        if not feed_url:
-            errors.append(f"Feed ohne URL übersprungen: {feed_data}")
-            flash(f"Feed ohne URL übersprungen: {feed_data}", "warning")
-            continue
-
-        # NEU: Homepage URL extrahieren für Import
-        episodes_data_from_rss, homepage_url = parse_rss_feed(feed_url)
-        if not episodes_data_from_rss: # Wenn RSS-Feed nicht geparst werden kann
-            errors.append(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url}")
-            flash(f"Fehler beim Parsen des RSS-Feeds (Import): {feed_url}", "danger")
-            continue
-
-
-        existing_feed = PodcastFeed.query.filter_by(url=feed_url).first()
-
-        if existing_feed:
-            try:
-                if feed_name and not existing_feed.name: 
-                    existing_feed.name = name
-                if topic and not existing_feed.topic: 
-                    existing_feed.topic = topic
-                existing_feed.is_active = is_active
-                existing_feed.homepage_url = homepage_url # Homepage URL aktualisieren
-                db.session.commit()
-                updated_count += 1
-                feeds_to_refresh_ids.append(existing_feed.id)
-            except Exception as e:
-                db.session.rollback()
-                errors.append(f"Fehler beim Aktualisieren von Feed {feed_url}: {str(e)}")
-                print(f"Fehler beim Aktualisieren von Feed {feed_url}: {str(e)}")
-                flash(f"Fehler beim Aktualisieren von Feed {feed_url}: {str(e)}", "danger")
-
-        else:
-            new_feed = PodcastFeed(url=feed_url, name=feed_name, topic=feed_topic, is_active=feed_is_active, homepage_url=homepage_url) # Homepage URL speichern
-            db.session.add(new_feed)
-            try:
-                db.session.commit()
-                imported_count += 1
-                feeds_to_refresh_ids.append(new_feed.id)
-            except Exception as e:
-                db.session.rollback() 
-                errors.append(f"Fehler beim Hinzufügen von Feed {feed_url}: {str(e)}")
-                print(f"Fehler beim Hinzufügen von Feed {feed_url}: {str(e)}")
-                flash(f"Fehler beim Hinzufügen von Feed {feed_url}: {str(e)}", "danger")
-
-
-    refreshed_episodes_count = 0
-    successful_feed_refreshes = 0
-    failed_feed_refreshes = 0
-
-    for feed_id in feeds_to_refresh_ids:
-        feed = PodcastFeed.query.get(feed_id)
-        if feed and feed.is_active:
-            # NEU: parse_rss_feed gibt jetzt auch homepage_url zurück, wir brauchen hier nur episodes_data
-            episodes_data, _ = parse_rss_feed(feed.url) 
-            if episodes_data:
-                new_episodes_for_feed_count = 0
-                for ep_data in episodes_data:
-                    existing_episode = Episode.query.filter_by(url=ep_data['url']).first()
-                    if not existing_episode:
-                        new_episode = Episode(
-                            feed_id=feed.id,
-                            title=ep_data['title'],
-                            description=ep_data['description'],
-                            pub_date=ep_data['pub_date'],
-                            url=ep_data['url'],
-                            is_favorite=False,
-                            host=ep_data['host']
-                        )
-                        db.session.add(new_episode)
-                        new_episodes_for_feed_count += 1
-                try:
-                    feed.last_checked = datetime.utcnow()
-                    db.session.commit()
-                    refreshed_episodes_count += new_episodes_for_feed_count
-                    successful_feed_refreshes += 1
-                except Exception as e:
-                    db.session.rollback()
-                    errors.append(f"Fehler beim Speichern der Episoden für Feed {feed.url}: {str(e)}")
-                    print(f"Fehler beim Speichern der Episoden für Feed {feed.url}: {str(e)}")
-                    flash(f"Fehler beim Speichern der Episoden für Feed {feed.url}: {str(e)}", "danger")
-                    failed_feed_refreshes += 1
-            else:
-                errors.append(f"Fehler beim Aktualisieren der Episoden für Feed {feed.url}: Keine Daten gefunden oder Parsen fehlgeschlagen.")
-                flash(f"Fehler beim Aktualisieren der Episoden für Feed {feed.url}: Keine Daten gefunden oder Parsen fehlgeschlagen.", "danger")
-                failed_feed_refreshes += 1
-
-    message_parts = []
-    if imported_count > 0:
-        message_parts.append(f"{imported_count} neu importiert")
-    if updated_count > 0:
-        message_parts.append(f"{updated_count} aktualisiert")
-    if refreshed_episodes_count > 0:
-        message_parts.append(f"{refreshed_episodes_count} neue Episoden hinzugefügt")
-    if failed_feed_refreshes > 0:
-        message_parts.append(f"{failed_feed_refreshes} Feed-Aktualisierungen fehlgeschlagen")
-
-    final_message = "Feeds importiert. " + ", ".join(message_parts) if message_parts else "Keine Feeds importiert."
-    flash(final_message, "success" if not errors else "warning")
-
-    return jsonify({
-        "message": final_message,
-        "imported_count": imported_count,
-        "updated_count": updated_count,
-        "refreshed_episodes_count": refreshed_episodes_count,
-        "errors": errors
-    }), 200
-
-
-# Episoden für einen spezifischen Feed aktualisieren
-@app.route('/feeds/<int:feed_id>/refresh_episodes', methods=['POST'])
-@login_required
-def refresh_episodes_endpoint(feed_id): 
-    feed = PodcastFeed.query.get(feed_id)
-    if not feed:
-        flash("Feed nicht gefunden", "danger")
-        return jsonify({"error": "Feed nicht gefunden"}), 404
-    if not feed.is_active:
-        flash("Feed ist inaktiv und kann nicht aktualisiert werden.", "warning")
-        return jsonify({"message": "Feed ist inaktiv und kann nicht aktualisiert werden."}), 400
-
-    episodes_data, _ = parse_rss_feed(feed.url) # NEU: homepage_url wird ignoriert
-    if not episodes_data:
-        flash("Keine Episoden gefunden oder Fehler beim Parsen des Feeds", "danger")
-        return jsonify({"message": "Keine Episoden gefunden oder Fehler beim Parsen des Feeds"}), 500
-
-    new_episodes_count = 0
-    for ep_data in episodes_data:
-        existing_episode = Episode.query.filter_by(url=ep_data['url']).first()
-        if not existing_episode:
-            new_episode = Episode(
-                feed_id=feed.id,
-                title=ep_data['title'],
-                description=ep_data['description'],
-                pub_date=ep_data['pub_date'],
-                url=ep_data['url'],
-                is_favorite=False,
-                host=ep_data['host']
-            )
-            db.session.add(new_episode)
-            new_episodes_count += 1
-    
-    try:
-        feed.last_checked = datetime.utcnow()
-        db.session.commit()
-        flash(f"Episoden für Feed aktualisiert. {new_episodes_count} neue Episoden hinzugefügt.", "success")
-        return jsonify({"message": f"Episoden für Feed aktualisiert. {new_episodes_count} neue Episoden hinzugefügt."}), 200
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Fehler beim Speichern der Episoden für Feed: {str(e)}", "danger")
-        return jsonify({"error": f"Fehler beim Speichern der Episoden für Feed: {str(e)}"}), 500
-
-# Alle Episoden abrufen
-@app.route('/episodes', methods=['GET'])
-@login_required
-def get_episodes():
-    episodes = Episode.query.all()
-    episodes_data = []
-    for ep in episodes:
-        episodes_data.append({
-            'id': ep.id,
-            'feed_id': ep.feed_id,
-            'title': ep.title,
-            'description': ep.description,
-            'pub_date': ep.pub_date.isoformat() if ep.pub_date else None,
-            'url': ep.url,
-            'is_favorite': ep.is_favorite,
-            'host': ep.host
-        })
-    return jsonify(episodes_data)
-
-# Episode aktualisieren (PUT)
-@app.route('/episodes/<int:episode_id>', methods=['PUT'])
+@app.route('/update_episode/<int:episode_id>', methods=['PUT'])
 @login_required
 def update_episode(episode_id):
     episode = Episode.query.get_or_404(episode_id)
     data = request.json
     
+    # Aktualisiere nur die erlaubten Felder
+    if 'title' in data:
+        episode.title = data['title']
+    if 'description' in data:
+        episode.description = data['description']
+    if 'pub_date' in data:
+        episode.pub_date = parse_date(data['pub_date'])
+    if 'url' in data:
+        episode.url = data['url']
+    if 'is_favorite' in data:
+        episode.is_favorite = data['is_favorite']
+    if 'host' in data:
+        episode.host = data['host']
+
     try:
-        if 'title' in data:
-            episode.title = data['title']
-        if 'description' in data:
-            episode.description = data['description']
-        if 'pub_date' in data:
-            try:
-                episode.pub_date = datetime.fromisoformat(data['pub_date'])
-            except ValueError:
-                flash("Ungültiges Datumsformat für pub_date", "danger")
-                return jsonify({"error": "Ungültiges Datumsformat für pub_date"}), 400
-        if 'url' in data:
-            episode.url = data['url']
-        if 'is_favorite' in data:
-            episode.is_favorite = bool(data['is_favorite'])
-        if 'host' in data:
-            episode.host = data['host']
-            
         db.session.commit()
-        flash("Episode aktualisiert", "success")
-        return jsonify({"message": "Episode aktualisiert", "id": episode.id, "title": episode.title, "is_favorite": episode.is_favorite, "host": episode.host}), 200
+        flash("Episode erfolgreich aktualisiert!", "success")
+        return jsonify({"message": "Episode erfolgreich aktualisiert!"}), 200
     except Exception as e:
         db.session.rollback()
         flash(f"Fehler beim Aktualisieren der Episode: {str(e)}", "danger")
         return jsonify({"error": f"Fehler beim Aktualisieren der Episode: {str(e)}"}), 500
 
-# Episode löschen (DELETE)
-@app.route('/episodes/<int:episode_id>', methods=['DELETE'])
+@app.route('/delete_episode/<int:episode_id>', methods=['DELETE'])
 @login_required
 def delete_episode(episode_id):
     episode = Episode.query.get_or_404(episode_id)
@@ -585,21 +486,125 @@ def delete_episode(episode_id):
         flash(f"Fehler beim Löschen der Episode: {str(e)}", "danger")
         return jsonify({"error": f"Fehler beim Löschen der Episode: {str(e)}"}), 500
 
+@app.route('/import_feeds_xlsx', methods=['POST'])
+@login_required
+def import_feeds_xlsx():
+    data = request.json
+    imported_count = 0
+    errors = []
+
+    for feed_data_entry in data:
+        feed_url = feed_data_entry.get('url')
+        if not feed_url:
+            errors.append(f"Skipping entry due to missing URL: {feed_data_entry}")
+            continue
+
+        existing_feed = PodcastFeed.query.filter_by(url=feed_url).first()
+
+        # Versuche, den Feed zu parsen, auch wenn er schon existiert, um aktuelle Daten zu bekommen
+        parsed_feed_data, episodes_data = parse_rss_feed(feed_url)
+
+        if not parsed_feed_data:
+            errors.append(f"Failed to parse RSS feed or invalid URL for {feed_url}")
+            continue
+
+        try:
+            if existing_feed:
+                # Update existing feed
+                existing_feed.name = parsed_feed_data.get('name', existing_feed.name)
+                existing_feed.topic = parsed_feed_data.get('topic', existing_feed.topic)
+                existing_feed.is_active = feed_data_entry.get('is_active', existing_feed.is_active)
+                existing_feed.last_checked = datetime.now()
+                existing_feed.homepage_url = parsed_feed_data.get('homepage_url', existing_feed.homepage_url)
+                db.session.commit()
+
+                # Delete old episodes for this feed to avoid duplicates during import
+                Episode.query.filter_by(feed_id=existing_feed.id).delete()
+                db.session.commit()
+
+                current_feed = existing_feed
+                message = f"Feed '{current_feed.name}' (URL: {feed_url}) aktualisiert."
+            else:
+                # Add new feed
+                new_feed = PodcastFeed(
+                    url=feed_url,
+                    name=parsed_feed_data.get('name', feed_url), # Verwende Parsed-Namen, sonst URL
+                    topic=parsed_feed_data.get('topic'),
+                    is_active=feed_data_entry.get('is_active', True),
+                    last_checked=datetime.now(),
+                    homepage_url=parsed_feed_data.get('homepage_url')
+                )
+                db.session.add(new_feed)
+                db.session.commit()
+                current_feed = new_feed
+                message = f"Feed '{current_feed.name}' (URL: {feed_url}) hinzugefügt."
+            
+            imported_count += 1
+            print(f"Import success: {message}")
+
+            # Add episodes for the current feed
+            for ep_data in episodes_data:
+                ep_data['feed_id'] = current_feed.id
+                ep_data.setdefault('is_favorite', False)
+                episode = Episode(**ep_data)
+                db.session.add(episode)
+            db.session.commit()
+
+        except Exception as e:
+            db.session.rollback()
+            errors.append(f"Database error for {feed_url}: {str(e)}")
+
+    if errors:
+        return jsonify({"message": f"Import finished with {imported_count} successes and {len(errors)} errors.", "errors": errors}), 200
+    else:
+        return jsonify({"message": f"Alle {imported_count} Feeds erfolgreich importiert!"}), 200
+
+@app.route('/export_feeds_xlsx', methods=['GET'])
+@login_required
+def export_feeds_xlsx():
+    feeds = PodcastFeed.query.all()
+    # Daten für XLSX aufbereiten (Beispielstruktur)
+    data = []
+    for feed in feeds:
+        data.append({
+            "Feed URL": feed.url,
+            "Podcast Name": feed.name,
+            "Topic": feed.topic,
+            "Homepage URL": feed.homepage_url,
+            "Is Active": "Yes" if feed.is_active else "No",
+            "Last Checked": feed.last_checked.strftime('%Y-%m-%d %H:%M:%S') if feed.last_checked else ''
+        })
+    # Hier würde die Logik zum Erstellen und Senden der XLSX-Datei folgen
+    # Für den Moment senden wir nur eine Erfolgsmeldung zurück
+    flash("Export-Funktion wird in einem zukünftigen Schritt implementiert.", "info")
+    return jsonify({"message": "Export-Funktion wird in einem zukünftigen Schritt implementiert. (Backend)"})
+
 
 if __name__ == '__main__':
-    # Initialisiere die Datenbank und erstelle Tabellen, falls nicht vorhanden
-    # ACHTUNG: Dies wird NUR ausgeführt, wenn app.py direkt gestartet wird (z.B. python app.py)
-    # Für Produktionsumgebungen (Cloud Run mit Gunicorn) muss db.create_all() im start.sh ausgeführt werden!
     with app.app_context():
         print("DEBUG: SQLALCHEMY_DATABASE_URI wird verwendet:", app.config['SQLALCHEMY_DATABASE_URI'])
         print("DEBUG: Versuche, Datenbanktabellen zu erstellen (db.create_all())...")
         try:
             db.create_all()
             print("DEBUG: Datenbanktabellen erfolgreich erstellt oder existieren bereits.")
+            # Füge hier optional einen Test-Feed hinzu, wenn die DB leer ist
+            # if PodcastFeed.query.count() == 0:
+            #     print("DEBUG: Keine Feeds gefunden. Füge einen Beispiel-Feed hinzu.")
+            #     example_feed = PodcastFeed(
+            #         url="http://feeds.feedburner.com/PodCastDownload", # Beispiel-URL
+            #         name="Beispiel Podcast",
+            #         topic="Tech",
+            #         is_active=True,
+            #         last_checked=datetime.now(),
+            #         homepage_url="https://example.com/podcast"
+            #     )
+            #     db.session.add(example_feed)
+            #     db.session.commit()
+            #     print("DEBUG: Beispiel-Feed hinzugefügt.")
+            #     # Optional: parse_rss_feed(example_feed.url) und Episoden hinzufügen
+            #     # Dies würde jedoch Netzwerkzugriff erfordern und den Start verzögern.
         except Exception as e:
             print(f"FEHLER: Fehler beim Erstellen der Datenbanktabellen: {e}")
             
     # Standardmäßig Flask-Entwicklungsserver starten
-    # In Produktion wird Gunicorn dies übernehmen
-    app.run(debug=True, host='0.0.0.0')
-
+    app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
