@@ -15,7 +15,7 @@ load_dotenv()
 # Flask-Anwendung initialisieren
 # 'static_folder' verweist auf den Ordner für statische Dateien (CSS, JS, Bilder, Favicon)
 # 'template_folder' verweist auf den Ordner für HTML-Templates (hier das Hauptverzeichnis '.')
-app = Flask(__name__, static_folder='static', template_folder='.')
+app = Flask(__name__, static_folder='static', template_template_folder='.')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FLASK_LOGIN', 'your_super_secret_key_that_you_must_change_in_production')
 # Korrektur: basedir definieren
@@ -36,8 +36,10 @@ login_manager.login_view = 'login' # Name der Login-Route
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(120), nullable=False)
+    # KORREKTUR HIER: LÄNGE DES password_hash FELDES ERHÖHT
+    password_hash = db.Column(db.String(255), nullable=False) # Erhöht von 120 auf 255
 
+    # Diese Methode wird nicht mehr für den Standardbenutzer verwendet, kann aber für andere Registrierungen nützlich sein
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -46,6 +48,7 @@ class User(UserMixin, db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
+    # Lade den Benutzer anhand der ID aus der Datenbank
     return User.query.get(int(user_id))
 
 # Erstelle einen Standardbenutzer, falls keiner existiert (NUR FÜR ENTWICKLUNG/TESTZWECKE)
@@ -54,10 +57,12 @@ def create_default_user():
     with app.app_context():
         if User.query.filter_by(username='user1').first() is None:
             user = User(username='user1')
-            user.set_password('password123') # BITTE IN PRODUKTION ÄNDERN!
+            # Hier wird DEIN zuvor definierter, gehashter Passwortwert zugewiesen
+            # Dieser Hash stammt von "SpeilPW"
+            user.password_hash = """scrypt:32768:8:1$anilOJC7MTH87cwT$624d07e2737d25657bff2e6d516bd38cdee48729cd9421b22b8f6a30f3e49a3627e3a334718f84216a6698bf0c55a21043f63fe4c73c9007ae212d6d657929d3""" 
             db.session.add(user)
             db.session.commit()
-            print("Default user 'user1' created.")
+            print("Default user 'user1' created with predefined hash.")
 
 
 # Datenbankmodelle
