@@ -398,25 +398,28 @@
 
         .feed-header-col.header-rss-url,
         .feed-url {
-            /* KORRIGIERT: flex-grow reduziert, min-width angepasst */
-            flex-grow: 0; 
-            flex-basis: 350px; /* Feste Breite oder flex-basis für bessere Kontrolle */
+            /* KORRIGIERT: flex-grow und flex-basis für bessere Verteilung */
+            flex-grow: 1; 
+            flex-shrink: 1; 
+            min-width: 150px; 
+            max-width: 400px; /* Begrenzt die maximale Breite */
             margin-right: 10px; 
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            min-width: 250px; /* Mindestbreite um Inhalt zu zeigen */
         }
         
         .feed-header-col.header-topic,
         .feed-topic { 
-            /* KORRIGIERT: flex-basis angepasst */
-            flex-basis: 180px; /* Etwas mehr Platz für Thema */
+            /* KORRIGIERT: flex-grow angepasst, min-width für Lesbarkeit */
+            flex-basis: auto; 
+            flex-grow: 0.5; /* Erlaubt dem Thema, etwas Platz einzunehmen */
             flex-shrink: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             padding: 4px 8px; 
+            min-width: 100px; /* Mindestbreite für das Thema */
         }
         
         .feed-header-col.header-remove {
@@ -702,7 +705,8 @@
         <div class="flex justify-between items-center mb-10">
             <h1 class="text-5xl">🎧 Podcast Episode Tracker</h1>
             {% if current_user.is_authenticated %}
-                <span class="ml-4 text-gray-700 font-bold">Hallo, {{ current_user.username }}</span> <!-- Korrektur des Usernamens und fett -->
+                <!-- Reihenfolge getauscht und Hallo-Text fett -->
+                <span class="ml-4 text-gray-700 font-bold">Hallo, {{ current_user.username }}</span> 
                 <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center group" title="Abmelden">
                     <svg class="w-5 h-5 mr-2 text-gray-600 group-hover:text-gray-800 transition duration-150 ease-in-out" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1"></path>
@@ -792,7 +796,8 @@
                     <tr>
                         <td colspan="5" class="empty-state">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3
+                                3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
                         </svg>
                             <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
                             <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
@@ -1307,7 +1312,7 @@
             const newValue = input.value.trim();
             if (newValue !== currentValue) {
                 showStatus('Aktualisiere Thema...', 'loading');
-                // KORRIGIERT: Endpoint auf `/feeds/:id` und Methode PUT geändert
+                // KORRIGIERT: Datenobjekt für PUT-Request klar definieren
                 fetchData(`/feeds/${feedId}`, 'PUT', { topic: newValue }) 
                     .then(response => {
                         if (response) {
@@ -1383,7 +1388,8 @@
                     <tr>
                         <td colspan="5" class="empty-state">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3
+                                3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
                         </svg>
                             <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
                             <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
@@ -1570,6 +1576,3 @@
         };
         reader.readAsArrayBuffer(file);
     }
-</script>
-</body>
-</html>

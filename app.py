@@ -15,7 +15,6 @@ load_dotenv()
 # Flask-Anwendung initialisieren
 # 'static_folder' verweist auf den Ordner für statische Dateien (CSS, JS, Bilder, Favicon)
 # 'template_folder' verweist auf den Ordner für HTML-Templates (hier das Hauptverzeichnis '.')
-# >>> KORREKTUR HIER: template_template_folder GEÄNDERT ZU template_folder <<<
 app = Flask(__name__, static_folder='static', template_folder='.')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FLASK_LOGIN', 'your_super_secret_key_that_you_must_change_in_production')
@@ -335,14 +334,19 @@ def add_feed():
         feed_data, episodes_data = parse_rss_feed(feed_url)
         if feed_data:
             try:
-                existing_feed.name = feed_data.get('name', existing_feed.name)
-                existing_feed.topic = feed_data.get('topic', existing_feed.topic)
+                # KORREKTUR: Name und Topic nur aktualisieren, wenn sie nicht bereits manuell gesetzt wurden
+                if existing_feed.name == existing_feed.url or existing_feed.name == 'Unbekannter Podcast':
+                    existing_feed.name = feed_data.get('name', existing_feed.name)
+                
+                # Wenn das geparste Thema nicht None ist UND das aktuelle Thema leer ist ODER es gleich dem geparsten ist
+                if feed_data.get('topic') is not None and (existing_feed.topic is None or existing_feed.topic == feed_data['topic']):
+                    existing_feed.topic = feed_data['topic']
+
                 existing_feed.homepage_url = feed_data.get('homepage_url', existing_feed.homepage_url)
                 existing_feed.last_checked = datetime.now()
                 db.session.commit()
 
                 # Bestehende Episoden für diesen Feed löschen, um Duplikate zu vermeiden
-                # Alternativ: Nur neue Episoden hinzufügen und alte aktualisieren/markieren
                 Episode.query.filter_by(feed_id=existing_feed.id).delete()
                 db.session.commit() # Commit, um Löschung zu persistieren
 
@@ -398,19 +402,26 @@ def add_feed():
         flash("Fehler beim Parsen des RSS-Feeds oder ungültige URL.", "danger")
         return jsonify({"error": "Fehler beim Parsen des RSS-Feeds oder ungültige URL."}), 400
 
-@app.route('/update_feed/<int:feed_id>', methods=['POST'])
+# Route für die Aktualisierung eines Feeds (wird von "Alle Aktualisieren" im Frontend aufgerufen)
+@app.route('/feeds/<int:feed_id>/refresh_episodes', methods=['POST'])
 @login_required
-def update_feed(feed_id):
+def refresh_episodes_endpoint(feed_id): # Umbenannt von update_feed zur besseren Unterscheidung
     feed = PodcastFeed.query.get_or_404(feed_id)
     feed_url = feed.url
 
-    feed_data, episodes_data = parse_rss_feed(feed_url)
+    parsed_feed_data, episodes_data = parse_rss_feed(feed_url)
 
-    if feed_data:
+    if parsed_feed_data:
         try:
-            feed.name = feed_data.get('name', feed.name) # Update name if available
-            feed.topic = feed_data.get('topic', feed.topic)
-            feed.homepage_url = feed_data.get('homepage_url', feed.homepage_url)
+            # KORREKTUR: Name und Topic nur aktualisieren, wenn sie nicht bereits manuell gesetzt wurden
+            # Dies verhindert das Überschreiben manueller Edits durch den RSS-Feed
+            if feed.name == feed.url or feed.name == 'Unbekannter Podcast':
+                 feed.name = parsed_feed_data.get('name', feed.name)
+            
+            if parsed_feed_data.get('topic') is not None and (feed.topic is None or feed.topic == parsed_feed_data['topic']):
+                 feed.topic = parsed_feed_data['topic']
+
+            feed.homepage_url = parsed_feed_data.get('homepage_url', feed.homepage_url)
             feed.last_checked = datetime.now()
             db.session.commit()
 
@@ -435,6 +446,34 @@ def update_feed(feed_id):
         flash("Fehler beim Parsen des RSS-Feeds während der Aktualisierung.", "danger")
         return jsonify({"error": "Fehler beim Parsen des RSS-Feeds während der Aktualisierung."}), 400
 
+# Route für das Aktualisieren von Feed-Metadaten (z.B. Topic, is_active) durch das Frontend
+@app.route('/feeds/<int:feed_id>', methods=['PUT'])
+@login_required
+def update_feed_metadata(feed_id): # Umbenannt zur besseren Unterscheidung
+    feed = PodcastFeed.query.get_or_404(feed_id)
+    data = request.json
+    
+    try:
+        if 'url' in data: # Normalerweise nicht über PUT geändert
+            feed.url = data['url']
+        if 'name' in data: # Wird direkt vom Frontend geändert
+            feed.name = data['name']
+        if 'topic' in data: # Wird direkt vom Frontend geändert
+            feed.topic = data['topic']
+        if 'is_active' in data:
+            feed.is_active = bool(data['is_active'])
+        if 'homepage_url' in data: # Normalerweise nicht über PUT geändert
+            feed.homepage_url = data['homepage_url']
+        
+        db.session.commit()
+        flash("Feed aktualisiert", "success")
+        return jsonify({"message": "Feed aktualisiert", "id": feed.id, "url": feed.url, "name": feed.name, "topic": feed.topic, "is_active": feed.is_active, "homepage_url": feed.homepage_url}), 200
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Fehler beim Aktualisieren des Feeds: {str(e)}", "danger")
+        return jsonify({"error": f"Fehler beim Aktualisieren des Feeds: {str(e)}"}), 500
+
+
 @app.route('/delete_feed/<int:feed_id>', methods=['DELETE'])
 @login_required
 def delete_feed(feed_id):
@@ -449,7 +488,7 @@ def delete_feed(feed_id):
         flash(f"Fehler beim Löschen des Feeds: {str(e)}", "danger")
         return jsonify({"error": f"Fehler beim Löschen des Feeds: {str(e)}"}), 500
 
-@app.route('/update_episode/<int:episode_id>', methods=['PUT'])
+@app.route('/episodes/<int:episode_id>', methods=['PUT']) # Vereinfacht von update_episode
 @login_required
 def update_episode(episode_id):
     episode = Episode.query.get_or_404(episode_id)
@@ -516,9 +555,13 @@ def import_feeds_xlsx():
 
         try:
             if existing_feed:
-                # Update existing feed
-                existing_feed.name = parsed_feed_data.get('name', existing_feed.name)
-                existing_feed.topic = parsed_feed_data.get('topic', existing_feed.topic)
+                # KORREKTUR: Name und Topic nur aktualisieren, wenn sie nicht bereits manuell gesetzt wurden
+                if existing_feed.name == existing_feed.url or existing_feed.name == 'Unbekannter Podcast':
+                    existing_feed.name = parsed_feed_data.get('name', existing_feed.name)
+                
+                if parsed_feed_data.get('topic') is not None and (existing_feed.topic is None or existing_feed.topic == parsed_feed_data['topic']):
+                    existing_feed.topic = parsed_feed_data['topic']
+
                 existing_feed.is_active = feed_data_entry.get('is_active', existing_feed.is_active)
                 existing_feed.last_checked = datetime.now()
                 existing_feed.homepage_url = parsed_feed_data.get('homepage_url', existing_feed.homepage_url)
@@ -614,3 +657,4 @@ if __name__ == '__main__':
             
     # Standardmäßig Flask-Entwicklungsserver starten
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
+
