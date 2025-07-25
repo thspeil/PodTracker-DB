@@ -86,7 +86,7 @@ class Episode(db.Model):
     def __repr__(self):
         return f'<Episode {self.title}>'
 
-# Hilfsfunktion zur URL-Validierung (korrigierte Python-Version)
+# Hilfsfunktion zur URL-Validierung
 def isValidUrl(url_string):
     if not isinstance(url_string, str): # Sicherstellen, dass es ein String ist
         return False
@@ -95,6 +95,7 @@ def isValidUrl(url_string):
         # Überprüfe, ob sowohl ein Schema (http, https) als auch ein Netzwerk-Ort (Domain) vorhanden ist
         return all([result.scheme, result.netloc])
     except ValueError: # urlparse kann ValueError werfen
+        print(f"DEBUG: isValidUrl ValueError for '{url_string}': {e}")
         return False
     except Exception as e:
         print(f"DEBUG: isValidUrl unexpected error for '{url_string}': {e}")
@@ -121,7 +122,8 @@ def parse_rss_feed(feed_url):
             'atom': 'http://www.w3.org/2005/Atom',
             'googleplay': 'http://www.google.com/schemas/play-podcasts/1.0', 
             'media': 'http://search.yahoo.com/mrss/', # Für media:content und media:thumbnail
-            'webfeeds': 'http://webfeeds.org/rss/1.0' 
+            'webfeeds': 'http://webfeeds.org/rss/1.0',
+            'dc': 'http://purl.org/dc/elements/1.1/' # Für Dublin Core elements like dc:creator
         }
 
         # --- Homepage URL extrahieren (Hierarchie der Präferenzen) ---
@@ -144,8 +146,10 @@ def parse_rss_feed(feed_url):
         
         # 3. atom:link rel="alternate" (kann auch auf Homepage verweisen, oft der "Standard" in neueren Feeds)
         if homepage_url is None:
-            # Suche nach atom:link mit rel="alternate" und type="text/html"
+            # Suche nach atom:link mit rel="alternate" und type="text/html" (oder ohne type, falls nicht spezifiziert)
             atom_link = root.find('.//channel/atom:link[@rel="alternate"][@type="text/html"]', namespaces)
+            if atom_link is None: # Fallback, falls type nicht angegeben ist
+                atom_link = root.find('.//channel/atom:link[@rel="alternate"]', namespaces)
             if atom_link is not None and 'href' in atom_link.attrib and isValidUrl(atom_link.attrib['href']):
                 homepage_url = atom_link.attrib['href']
                 print(f"DEBUG: Homepage found (atom html): {homepage_url}")
@@ -182,46 +186,51 @@ def parse_rss_feed(feed_url):
             
             episode_url = None
             
-            # Priorität der Episode URL: enclosure (audio/video) > media:content (audio/video) > guid (unbedingt) > item/link (webpage)
-            
-            # 1. Check for standard <enclosure> (often the direct audio file)
+            # Priorität der Episode URL:
+            # 1. <enclosure> (Direktlink zur Mediendatei, z.B. MP3)
             enclosure = item.find('enclosure')
             if enclosure is not None and 'url' in enclosure.attrib and isValidUrl(enclosure.attrib['url']):
                 episode_url = enclosure.attrib['url']
-                # print(f"DEBUG: Found episode URL in enclosure for '{title}': {episode_url}")
+                print(f"DEBUG: Found episode URL in enclosure for '{title}': {episode_url}")
             
-            # 2. Check for media:content (common in some feeds for media files, can be audio/video/image)
+            # 2. <media:content> (für Medieninhalte, kann auch auf MP3, Video etc. verweisen)
             if episode_url is None:
                 media_content = item.find('media:content', namespaces)
                 if media_content is not None and 'url' in media_content.attrib and isValidUrl(media_content.attrib['url']):
                     episode_url = media_content.attrib['url']
-                    # print(f"DEBUG: Found episode URL in media:content for '{title}': {episode_url}")
+                    print(f"DEBUG: Found episode URL in media:content for '{title}': {episode_url}")
 
-            # 3. Check for media:thumbnail (some news feeds use this for a primary link, though typically for an image)
-            if episode_url is None:
-                media_thumbnail = item.find('media:thumbnail', namespaces)
-                if media_thumbnail is not None and 'url' in media_thumbnail.attrib and isValidUrl(media_thumbnail.attrib['url']):
-                    # Nur verwenden, wenn der Link nicht offensichtlich ein Bild ist (kein direkter Check, aber ein Versuch)
-                    if not media_thumbnail.attrib['url'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                        episode_url = media_thumbnail.attrib['url']
-                        # print(f"DEBUG: Found episode URL in media:thumbnail for '{title}': {episode_url}")
-
-            # 4. Check for <guid> as a canonical link. Use if valid URL, regardless of isPermalink attribute, as it's often the unique identifier/link.
+            # 3. <guid> (als kanonischer Link, oft ein direkter Link zur Episode oder deren Seite)
+            # Hier prüfen wir, ob die GUID eine URL ist, da sie auch nur eine ID sein kann.
             if episode_url is None:
                 guid_tag = item.find('guid')
-                if guid_tag is not None and guid_tag.text and isValidUrl(guid_tag.text):
-                    episode_url = guid_tag.text 
-                    # print(f"DEBUG: Found episode URL in guid for '{title}': {episode_url}")
+                if guid_tag is not None and guid_tag.text:
+                    if isValidUrl(guid_tag.text):
+                        episode_url = guid_tag.text 
+                        print(f"DEBUG: Found episode URL in guid (valid URL) for '{title}': {episode_url}")
+                    else:
+                        print(f"DEBUG: GUID for '{title}' is not a valid URL: {guid_tag.text}")
                 
-            # 5. Fallback to item/link. This often points to the episode's webpage, not the audio file.
+            # 4. <item><link> (oft die Webseite der Episode)
             if episode_url is None:
                 item_link_tag = item.find('link')
                 if item_link_tag is not None and item_link_tag.text and isValidUrl(item_link_tag.text):
                     episode_url = item_link_tag.text
-                    # print(f"DEBUG: Found episode URL in item/link fallback for '{title}': {episode_url}")
+                    print(f"DEBUG: Found episode URL in item/link fallback for '{title}': {episode_url}")
                 else:
                     print(f"DEBUG: Item link for '{title}' is not a valid URL or missing.")
 
+            # 5. <media:thumbnail> (manchmal in News-Feeds als primärer Link genutzt, obwohl typisch für Bilder)
+            # Dies ist ein seltenerer Fall, aber für manche News-Feeds relevant.
+            if episode_url is None:
+                media_thumbnail = item.find('media:thumbnail', namespaces)
+                if media_thumbnail is not None and 'url' in media_thumbnail.attrib and isValidUrl(media_thumbnail.attrib['url']):
+                    # Nur verwenden, wenn der Link nicht offensichtlich ein Bild ist (kein direkter Check, aber ein Versuch)
+                    if not media_thumbnail.attrib['url'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                        episode_url = media_thumbnail.attrib['url']
+                        print(f"DEBUG: Found episode URL in media:thumbnail for '{title}': {episode_url}")
+                    else:
+                        print(f"DEBUG: media:thumbnail for '{title}' looks like an image, skipping as episode URL: {media_thumbnail.attrib['url']}")
 
             host = None
             itunes_author = item.find('itunes:author', namespaces)
@@ -229,10 +238,13 @@ def parse_rss_feed(feed_url):
                 host = itunes_author.text
             elif item.find('author') is not None: 
                 host = item.find('author').text
+            elif item.find('dc:creator', namespaces) is not None: # Neu: dc:creator für News-Feeds
+                host = item.find('dc:creator', namespaces).text
+
 
             pub_date = None
             if pub_date_str:
-                # Erweiterte Liste von Datumsformaten zum Parsen
+                # Erweiterte Liste von Datumsformaten zum Parsen (Priorität von spezifisch zu allgemein)
                 date_formats = [
                     '%a, %d %b %Y %H:%M:%S %Z',  # RFC 822 (e.g., Thu, 01 Jan 2020 00:00:00 GMT)
                     '%a, %d %b %Y %H:%M:%S %z',  # RFC 822 with UTC offset (e.g., Thu, 01 Jan 2020 00:00:00 +0000)
@@ -245,10 +257,14 @@ def parse_rss_feed(feed_url):
                     '%m/%d/%Y %H:%M:%S',         # MM/DD/YYYY HH:MM:SS (naive)
                     '%d.%m.%Y %H:%M',            # DD.MM.YYYY HH:MM (naive)
                     '%Y-%m-%d',                  # Just date (e.g., 2020-01-01)
+                    '%Y/%m/%d %H:%M:%S',         # YYYY/MM/DD HH:MM:SS
+                    '%m/%d/%Y',                  # MM/DD/YYYY
+                    '%d %b %Y',                  # DD Mon YYYY
                 ]
                 for fmt in date_formats:
                     try:
                         pub_date = datetime.strptime(pub_date_str, fmt)
+                        # print(f"DEBUG: Datum für '{title}' erfolgreich geparst mit Format '{fmt}': {pub_date}")
                         break 
                     except ValueError:
                         continue 
