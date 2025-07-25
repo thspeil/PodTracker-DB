@@ -183,9 +183,41 @@ def parse_rss_feed(feed_url):
                     url_elem = item.find('link') 
 
                 # KORREKTUR: Host/Author Parsing verbessert
-                host_elem = item.find('itunes:author', namespaces) or \
-                            item.find('author') or \
-                            item.find('dc:creator', namespaces) # Versuche dc:creator
+                host_text = 'Unbekannter Host' # Default value
+                
+                # Priority 1: item-level iTunes author
+                itunes_author_item = item.find('itunes:author', namespaces)
+                if itunes_author_item is not None and itunes_author_item.text:
+                    host_text = itunes_author_item.text.strip()
+                else:
+                    # Priority 2: item-level generic author
+                    author_item = item.find('author')
+                    if author_item is not None:
+                        # Some <author> tags might contain <name> sub-element
+                        name_in_author = author_item.find('name')
+                        if name_in_author is not None and name_in_author.text:
+                            host_text = name_in_author.text.strip()
+                        elif author_item.text: # Direct text in <author> tag
+                            host_text = author_item.text.strip()
+                    else:
+                        # Priority 3: item-level Dublin Core creator
+                        dc_creator_item = item.find('dc:creator', namespaces)
+                        if dc_creator_item is not None and dc_creator_item.text:
+                            host_text = dc_creator_item.text.strip()
+                        else:
+                            # Priority 4: channel-level iTunes owner/author (common for entire podcast)
+                            itunes_owner_name = channel.find('itunes:owner/itunes:name', namespaces)
+                            if itunes_owner_name is not None and itunes_owner_name.text:
+                                host_text = itunes_owner_name.text.strip()
+                            else:
+                                itunes_author_channel = channel.find('itunes:author', namespaces)
+                                if itunes_author_channel is not None and itunes_author_channel.text:
+                                    host_text = itunes_author_channel.text.strip()
+                                else:
+                                    # Priority 5: channel-level generic author
+                                    author_channel = channel.find('author')
+                                    if author_channel is not None and author_channel.text:
+                                        host_text = author_channel.text.strip()
 
                 
                 episode_url = None
@@ -193,7 +225,7 @@ def parse_rss_feed(feed_url):
                     if 'url' in url_elem.attrib: # Für <enclosure url="...">
                         episode_url = url_elem.attrib['url']
                     elif url_elem.text and (url_elem.text.startswith('http://') or url_elem.text.startswith('https://')): # Für <link>text</link>
-                        episode_url = url.text
+                        episode_url = url_elem.text # Korrigiert: url_elem.text statt url.text
 
                 # Überprüfe, ob episode_url ein valider Link ist (kann auch nur ein HTML-Link sein)
                 if episode_url and not (episode_url.startswith('http://') or episode_url.startswith('https://')):
@@ -204,7 +236,7 @@ def parse_rss_feed(feed_url):
                     'description': description_elem.text if description_elem is not None else '',
                     'pub_date': parse_date(pub_date_elem.text) if pub_date_elem is not None else datetime.now(),
                     'url': episode_url,
-                    'host': host_elem.text if host_elem is not None else 'Unbekannter Host'
+                    'host': host_text # Use the determined host_text
                 })
         
         # Prüfen, ob es sich um einen Atom-Feed handelt (hat ein 'feed'-Element als root)
@@ -219,7 +251,17 @@ def parse_rss_feed(feed_url):
                 description_elem = item.find('{http://www.w3.org/2005/Atom}summary', namespaces) or item.find('{http://www.w3.org/2005/Atom}content', namespaces)
                 pub_date_elem = item.find('{http://www.w3.org/2005/Atom}published', namespaces)
                 url_elem = item.find('{http://www.w3.org/2005/Atom}link[@rel="enclosure"]', namespaces) or item.find('{http://www.w3.org/2005/Atom}link', namespaces)
+                
+                # KORREKTUR: Host/Author Parsing verbessert für Atom
+                host_text = 'Unbekannter Host'
                 author_elem = item.find('{http://www.w3.org/2005/Atom}author/{http://www.w3.org/2005/Atom}name', namespaces)
+                if author_elem is not None and author_elem.text:
+                    host_text = author_elem.text.strip()
+                else:
+                    channel_author_elem = root.find('{http://www.w3.org/2005/Atom}author/{http://www.w3.org/2005/Atom}name', namespaces)
+                    if channel_author_elem is not None and channel_author_elem.text:
+                        host_text = channel_author_elem.text.strip()
+
 
                 episode_url = url_elem.attrib['href'] if url_elem is not None and 'href' in url_elem.attrib else None
                 
@@ -231,7 +273,7 @@ def parse_rss_feed(feed_url):
                     'description': description_elem.text if description_elem is not None else '',
                     'pub_date': parse_date(pub_date_elem.text) if pub_date_elem is not None else datetime.now(),
                     'url': episode_url,
-                    'host': author_elem.text if author_elem is not None else 'Unbekannter Host'
+                    'host': host_text
                 })
         else:
             raise ValueError("Ungültiges Feed-Format: Weder RSS-Channel noch Atom-Feed gefunden.")
@@ -662,4 +704,3 @@ if __name__ == '__main__':
             
     # Standardmäßig Flask-Entwicklungsserver starten
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
-
