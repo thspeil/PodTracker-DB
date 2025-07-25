@@ -15,7 +15,8 @@ load_dotenv()
 # Flask-Anwendung initialisieren
 # 'static_folder' verweist auf den Ordner für statische Dateien (CSS, JS, Bilder, Favicon)
 # 'template_folder' verweist auf den Ordner für HTML-Templates (hier das Hauptverzeichnis '.')
-app = Flask(__name__, static_folder='static', template_template_folder='.')
+# >>> KORREKTUR HIER: template_template_folder GEÄNDERT ZU template_folder <<<
+app = Flask(__name__, static_folder='static', template_folder='.')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY_FLASK_LOGIN', 'your_super_secret_key_that_you_must_change_in_production')
 # Korrektur: basedir definieren
