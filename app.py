@@ -685,6 +685,29 @@ def export_feeds_xlsx():
     return jsonify({"message": "Export-Funktion wird in einem zukünftigen Schritt implementiert. (Backend)"})
 
 
+# Hinzugefügter Flask CLI Befehl für die Datenbankinitialisierung
+@app.cli.command("init-db")
+def init_db_command():
+    """Initialisiert die Datenbanktabellen und erstellt einen initialen Admin-Benutzer, falls nicht vorhanden."""
+    with app.app_context():
+        print("Initialisiere Datenbanktabellen...")
+        db.create_all() # Erstellt Tabellen, falls sie nicht existieren
+        
+        # Initialen Admin-Benutzer erstellen, falls keiner existiert
+        if User.query.filter_by(username='admin').first() is None:
+            print("Erstelle initialen Admin-Benutzer 'admin'...")
+            admin_user = User(username='admin')
+            # Passwort aus Umgebungsvariable oder Standardpasswort 'adminpassword'
+            admin_user.set_password(os.getenv('ADMIN_PASSWORD', 'adminpassword')) 
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Admin-Benutzer 'admin' erfolgreich erstellt.")
+        else:
+            print("Admin-Benutzer 'admin' existiert bereits. Überspringe die Erstellung.")
+            
+    print("Datenbankinitialisierung abgeschlossen.")
+
+
 if __name__ == '__main__':
     with app.app_context():
         print("DEBUG: SQLALCHEMY_DATABASE_URI wird verwendet:", app.config['SQLALCHEMY_DATABASE_URI'])
