@@ -141,36 +141,54 @@ def parse_rss_feed(feed_url):
             # RSS Feed Parsing
             feed_data['name'] = channel.find('title').text if channel.find('title') is not None else 'Unbekannter Podcast'
             
-            # --- START KORREKTUR: Homepage URL Priorisierung für RSS ---
+            # Homepage URL: Verbesserte Priorisierung
             homepage_url = None
-            
-            # Priorität 1: atom:link rel="alternate" type="text/html" (explizit für HTML-Homepage)
-            atom_link_html = channel.find('atom:link[@rel="alternate"]', namespaces)
-            if atom_link_html is not None and 'href' in atom_link_html.attrib and atom_link_html.attrib.get('type') == 'text/html':
-                homepage_url = atom_link_html.attrib['href']
-            
-            if not homepage_url: # Wenn noch nicht gefunden
-                # Priorität 2: Standard <link> Tag (muss HTTP/HTTPS sein und darf nicht der Feed-URL entsprechen)
-                link_elem = channel.find('link')
-                if link_elem is not None:
-                    candidate_url = link_elem.text if link_elem.text else link_elem.attrib.get('href')
-                    if candidate_url and (candidate_url.startswith('http://') or candidate_url.startswith('https://')) and candidate_url != feed_url:
-                        homepage_url = candidate_url
 
-            if not homepage_url: # Wenn noch nicht gefunden
-                # Priorität 3: itunes:new-feed-url (Primär für Redirects, aber manchmal der einzige Nicht-XML-Link)
+            # Priorität 1: Standard <link> Tag im <channel>
+            link_element = channel.find('link')
+            if link_element is not None:
+                # Prüfe den Textinhalt zuerst
+                if link_element.text and (link_element.text.startswith('http://') or link_element.text.startswith('https://')):
+                    homepage_url = link_element.text.strip()
+                # Wenn Textinhalt nicht valide, prüfe 'href' Attribut (weniger üblich für channel/link, aber möglich)
+                elif 'href' in link_element.attrib and (link_element.attrib['href'].startswith('http://') or link_element.attrib['href'].startswith('https://')):
+                    homepage_url = link_element.attrib['href'].strip()
+
+            # Priorität 2: itunes:new-feed-url (falls noch keine Homepage gefunden)
+            if homepage_url is None:
                 itunes_new_feed_url = channel.find('itunes:new-feed-url', namespaces)
-                if itunes_new_feed_url is not None and itunes_new_feed_url.text:
-                    candidate_url = itunes_new_feed_url.text
-                    if candidate_url and (candidate_url.startswith('http://') or candidate_url.startswith('https://')) and candidate_url != feed_url:
-                        homepage_url = candidate_url
+                if itunes_new_feed_url is not None and itunes_new_feed_url.text and \
+                   (itunes_new_feed_url.text.startswith('http://') or itunes_new_feed_url.text.startswith('https://')):
+                    homepage_url = itunes_new_feed_url.text.strip()
 
-            # Final validation für alle oben gefundenen URLs
+            # Priorität 3: atom:link rel="alternate" (falls noch keine Homepage gefunden)
+            if homepage_url is None:
+                atom_alternate_link = channel.find('atom:link[@rel="alternate"]', namespaces)
+                if atom_alternate_link is not None and 'href' in atom_alternate_link.attrib and \
+                   (atom_alternate_link.attrib['href'].startswith('http://') or atom_alternate_link.attrib['href'].startswith('https://')):
+                    homepage_url = atom_alternate_link.attrib['href'].strip()
+            
+            # Priorität 4 (Fallback): Ableitung von atom:link rel="self"
+            if homepage_url is None:
+                atom_self_link = channel.find('atom:link[@rel="self"]', namespaces)
+                if atom_self_link is not None and 'href' in atom_self_link.attrib:
+                    feed_base_url = atom_self_link.attrib['href'].strip()
+                    # Heuristik: Entferne bekannte Feed-Pfade, um zur Basis-URL zu kommen
+                    if '/feed/mp3' in feed_base_url:
+                        homepage_url = feed_base_url.replace('/feed/mp3', '')
+                    elif '/rss' in feed_base_url:
+                        homepage_url = feed_base_url.replace('/rss', '')
+                    # Wenn nichts entfernt wurde, bedeutet dies, dass es sich möglicherweise um eine Basis-URL handelt
+                    # oder dass keine weitere Ableitung möglich ist.
+                    if homepage_url == feed_base_url: 
+                         homepage_url = None # Setze es auf None, wenn keine sinnvolle Ableitung möglich war
+
+
+            # Letzte Validierung der gefundenen Homepage URL
             if homepage_url and not (homepage_url.startswith('http://') or homepage_url.startswith('https://')):
                 homepage_url = None # Setze ungültige URLs auf None
-            
+
             feed_data['homepage_url'] = homepage_url
-            # --- END KORREKTUR: Homepage URL Priorisierung für RSS ---
 
             # Den Topic aus verschiedenen möglichen Tags lesen
             topic = None
@@ -254,18 +272,7 @@ def parse_rss_feed(feed_url):
         elif root.tag == '{http://www.w3.org/2005/Atom}feed':
             # Atom Feed
             feed_data['name'] = root.find('{http://www.w3.org/2005/Atom}title', namespaces).text if root.find('{http://www.w3.org/2005/Atom}title', namespaces) is not None else 'Unbekannter Atom Feed'
-            
-            # --- START KORREKTUR: Homepage URL Priorisierung für Atom ---
-            homepage_url = None
-            atom_link_alternate = root.find('{http://www.w3.org/2005/Atom}link[@rel="alternate"]', namespaces)
-            if atom_link_alternate is not None and 'href' in atom_link_alternate.attrib:
-                candidate_url = atom_link_alternate.attrib['href']
-                # Stelle sicher, dass es eine HTTP/HTTPS-URL ist
-                if candidate_url and (candidate_url.startswith('http://') or candidate_url.startswith('https://')):
-                    homepage_url = candidate_url
-            feed_data['homepage_url'] = homepage_url
-            # --- END KORREKTUR: Homepage URL Priorisierung für Atom ---
-            
+            feed_data['homepage_url'] = root.find('{http://www.w3.org/2005/Atom}link[@rel="alternate"]', namespaces).attrib['href'] if root.find('{http://www.w3.org/2005/Atom}link[@rel="alternate"]', namespaces) is not None else None
             feed_data['topic'] = None # Atom hat kein direktes "topic" Feld
 
             for item in root.findall('{http://www.w3.org/2005/Atom}entry', namespaces):
@@ -707,33 +714,10 @@ def export_feeds_xlsx():
     return jsonify({"message": "Export-Funktion wird in einem zukünftigen Schritt implementiert. (Backend)"})
 
 
-# Hinzugefügter Flask CLI Befehl für die Datenbankinitialisierung
-@app.cli.command("init-db")
-def init_db_command():
-    """Initialisiert die Datenbanktabellen und erstellt einen initialen Admin-Benutzer, falls nicht vorhanden."""
-    with app.app_context():
-        print("Initialisiere Datenbanktabellen...")
-        db.create_all() # Erstellt Tabellen, falls sie nicht existieren
-        
-        # Initialen Admin-Benutzer erstellen, falls keiner existiert
-        if User.query.filter_by(username='admin').first() is None:
-            print("Erstelle initialen Admin-Benutzer 'admin'...")
-            admin_user = User(username='admin')
-            # Passwort aus Umgebungsvariable oder Standardpasswort 'adminpassword'
-            admin_user.set_password(os.getenv('ADMIN_PASSWORD', 'adminpassword')) 
-            db.session.add(admin_user)
-            db.session.commit()
-            print("Admin-Benutzer 'admin' erfolgreich erstellt.")
-        else:
-            print("Admin-Benutzer 'admin' existiert bereits. Überspringe die Erstellung.")
-            
-    print("Datenbankinitialisierung abgeschlossen.")
-
-
 if __name__ == '__main__':
     with app.app_context():
         print("DEBUG: SQLALCHEMY_DATABASE_URI wird verwendet:", app.config['SQLALCHEMY_DATABASE_URI'])
-        print("DEBUG: Versuche, Datenbanktabellen zu erstellen (db.create_all())...\n") # NEWLINE hinzugefügt
+        print("DEBUG: Versuche, Datenbanktabellen zu erstellen (db.create_all())...")
         try:
             db.create_all()
             print("DEBUG: Datenbanktabellen erfolgreich erstellt oder existieren bereits.")
