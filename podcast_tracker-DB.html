@@ -395,6 +395,7 @@
             white-space: nowrap;
             cursor: help;
             padding-right: 5px; 
+            text-align: left;
         }
 
         .feed-header-col.header-rss-url,
@@ -412,21 +413,20 @@
         
         .feed-header-col.header-topic,
         .feed-topic { 
-            /* KORRIGIERT: flex-grow angepasst, min-width für Lesbarkeit */
-            flex-basis: auto; 
-            flex-grow: 0.5; /* Erlaubt dem Thema, etwas Platz einzunehmen */
+            flex-basis: 100px; 
+            flex-grow: 0; 
             flex-shrink: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             padding: 4px 8px; 
-            min-width: 100px; /* Mindestbreite für das Thema */
+            text-align: center; /* Text zentrieren */
         }
         
         .feed-header-col.header-actions { /* NEU: Für Aktualisieren und Entfernen */
             flex: 0 0 160px; /* Breite für beide Buttons */
             display: flex;
-            justify-content: flex-end; /* Rechtsbündig */
+            justify-content: center; /* Zentriert die Buttons */
             align-items: center;
             gap: 8px; /* Abstand zwischen den Buttons */
             padding-right: 5px; /* Etwas Innenabstand */
