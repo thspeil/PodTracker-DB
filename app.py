@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory,
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import requests
 import xml.etree.ElementTree as ET
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -74,6 +74,9 @@ class PodcastFeed(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     last_checked = db.Column(db.DateTime, default=datetime.now)
     homepage_url = db.Column(db.String(500)) # Neues Feld für Homepage URL
+    itunes_available = db.Column(db.Boolean, default=None) # iTunes Verfügbarkeit
+    youtube_available = db.Column(db.Boolean, default=None) # YouTube Verfügbarkeit
+    availability_checked = db.Column(db.DateTime, default=None) # Wann zuletzt geprüft
 
     episodes = db.relationship('Episode', backref='feed', lazy=True, cascade="all, delete-orphan")
 
@@ -320,6 +323,139 @@ def parse_rss_feed(feed_url):
         return None, None
 
 
+def check_itunes_availability(podcast_name):
+    """
+    Prüft, ob ein Podcast auf iTunes/Apple Podcasts verfügbar ist
+    """
+    try:
+        # Einfache Suche über iTunes Search API (kostenlos)
+        search_query = podcast_name.replace(" ", "+")
+        itunes_api_url = f"https://itunes.apple.com/search?term={search_query}&media=podcast&limit=5"
+        
+        response = requests.get(itunes_api_url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            # Prüfe, ob Ergebnisse gefunden wurden
+            if data.get('resultCount', 0) > 0:
+                # Prüfe, ob der Podcast-Name in den Ergebnissen vorkommt
+                for result in data.get('results', []):
+                    result_name = result.get('collectionName', '').lower()
+                    if podcast_name.lower() in result_name or result_name in podcast_name.lower():
+                        return True
+                # Auch wenn kein exakter Match, aber Ergebnisse vorhanden
+                return True
+            return False
+    except Exception as e:
+        print(f"Fehler bei iTunes-Verfügbarkeitsprüfung für '{podcast_name}': {e}")
+        return None
+
+
+def check_youtube_availability(podcast_name):
+    """
+    Prüft, ob ein Podcast auf YouTube verfügbar ist
+    Verbesserte Heuristik basierend auf YouTube-Suche
+    """
+    try:
+        # YouTube-Suche simulieren (ohne API-Key)
+        search_query = f"{podcast_name} podcast".replace(" ", "+")
+        youtube_search_url = f"https://www.youtube.com/results?search_query={search_query}"
+        
+        # HTTP-Request mit besseren Headers
+        response = requests.get(youtube_search_url, timeout=10, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        })
+        
+        if response.status_code == 200:
+            content = response.text.lower()
+            podcast_name_lower = podcast_name.lower()
+            
+            # Verbesserte Heuristik: Prüfe auf spezifische YouTube-Indikatoren
+            # 1. Prüfe, ob der exakte Podcast-Name in Video-Titeln vorkommt
+            # 2. Prüfe auf Kanal-Indikatoren
+            # 3. Prüfe auf Podcast-spezifische Keywords
+            
+            # Entferne häufige Wörter, die zu False Positives führen
+            common_words = ['podcast', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with']
+            podcast_keywords = [word for word in podcast_name_lower.split() if word not in common_words and len(word) > 2]
+            
+            if not podcast_keywords:
+                # Fallback: Verwende den ganzen Namen wenn keine Keywords übrig
+                podcast_keywords = [podcast_name_lower]
+            
+            # Prüfe auf starke Indikatoren für einen echten Podcast-Kanal
+            strong_indicators = [
+                f'"{podcast_name_lower}"',  # Exakter Name in Anführungszeichen
+                f'{podcast_name_lower} official',  # Offizieller Kanal
+                f'{podcast_name_lower} channel',  # Kanal-Indikator
+                'podcast episodes',  # Podcast-Episode-Indikator
+                'new episode',  # Neue Episode
+            ]
+            
+            # Zähle starke Indikatoren
+            strong_matches = sum(1 for indicator in strong_indicators if indicator in content)
+            
+            # Zähle Keyword-Matches
+            keyword_matches = sum(1 for keyword in podcast_keywords if keyword in content)
+            
+            # Prüfe auf negative Indikatoren (deutet darauf hin, dass es den Podcast nicht gibt)
+            negative_indicators = [
+                'no results found',
+                'did you mean',
+                'try different keywords',
+                'no videos found'
+            ]
+            
+            negative_matches = sum(1 for indicator in negative_indicators if indicator in content)
+            
+            # Entscheidungslogik:
+            # - Mindestens 1 starker Indikator UND mindestens 50% der Keywords gefunden
+            # - ODER mindestens 2 starke Indikatoren
+            # - UND keine negativen Indikatoren
+            
+            if negative_matches > 0:
+                return False
+                
+            if strong_matches >= 2:
+                return True
+                
+            if strong_matches >= 1 and keyword_matches >= len(podcast_keywords) * 0.5:
+                return True
+                
+            # Wenn nur wenige oder schwache Matches, dann wahrscheinlich nicht verfügbar
+            return False
+            
+    except Exception as e:
+        print(f"Fehler bei YouTube-Verfügbarkeitsprüfung für '{podcast_name}': {e}")
+        return None
+
+
+def update_feed_availability(feed_id):
+    """
+    Aktualisiert die Verfügbarkeitsinformationen für einen Feed
+    """
+    try:
+        feed = PodcastFeed.query.get(feed_id)
+        if not feed:
+            return False
+            
+        # Prüfe iTunes-Verfügbarkeit
+        feed.itunes_available = check_itunes_availability(feed.name)
+        
+        # Prüfe YouTube-Verfügbarkeit
+        feed.youtube_available = check_youtube_availability(feed.name)
+        
+        # Setze Zeitstempel
+        feed.availability_checked = datetime.now()
+        
+        db.session.commit()
+        return True
+        
+    except Exception as e:
+        print(f"Fehler beim Aktualisieren der Verfügbarkeit für Feed {feed_id}: {e}")
+        db.session.rollback()
+        return False
+
+
 # Routen
 @app.route('/')
 @login_required
@@ -373,14 +509,18 @@ def get_feeds():
             'is_active': feed.is_active,
             'last_checked': feed.last_checked.isoformat(),
             'homepage_url': feed.homepage_url,
-            'episodes_count': episodes_count
+            'episodes_count': episodes_count,
+            'itunes_available': feed.itunes_available,
+            'youtube_available': feed.youtube_available,
+            'availability_checked': feed.availability_checked.isoformat() if feed.availability_checked else None
         })
     return jsonify(feeds_data)
 
 @app.route('/episodes', methods=['GET'])
 @login_required
 def get_episodes():
-    episodes = db.session.query(Episode, PodcastFeed.name.label('podcast_name')).join(PodcastFeed).all()
+    # Nur Episoden von aktiven Feeds anzeigen
+    episodes = db.session.query(Episode, PodcastFeed.name.label('podcast_name')).join(PodcastFeed).filter(PodcastFeed.is_active == True).all()
     episodes_data = [{
         'id': ep.Episode.id,
         'feed_id': ep.Episode.feed_id,
@@ -435,6 +575,9 @@ def add_feed():
                 
                 db.session.commit()
                 
+                # Verfügbarkeits-Check für bestehenden Feed durchführen
+                update_feed_availability(existing_feed.id)
+                
                 flash(f"Feed '{existing_feed.name}' und Episoden erfolgreich aktualisiert (existierte bereits)!", "success")
                 return jsonify({"message": f"Feed '{existing_feed.name}' und Episoden erfolgreich aktualisiert (existierte bereits)!"}), 200
             except Exception as e:
@@ -467,6 +610,9 @@ def add_feed():
                 db.session.add(episode)
             
             db.session.commit()
+            
+            # Verfügbarkeits-Check für neuen Feed durchführen
+            update_feed_availability(new_feed.id)
             
             flash(f"Feed '{new_feed.name}' und Episoden erfolgreich hinzugefügt!", "success")
             return jsonify({"message": f"Feed '{new_feed.name}' und Episoden erfolgreich hinzugefügt!"}), 201
@@ -714,6 +860,218 @@ def export_feeds_xlsx():
     return jsonify({"message": "Export-Funktion wird in einem zukünftigen Schritt implementiert. (Backend)"})
 
 
+@app.route('/api/check-availability/<int:feed_id>', methods=['POST'])
+@login_required
+def check_availability(feed_id):
+    """
+    Prüft die Verfügbarkeit eines Feeds auf iTunes und YouTube
+    """
+    try:
+        success = update_feed_availability(feed_id)
+        if success:
+            feed = PodcastFeed.query.get(feed_id)
+            return jsonify({
+                "success": True,
+                "itunes_available": feed.itunes_available,
+                "youtube_available": feed.youtube_available,
+                "availability_checked": feed.availability_checked.isoformat() if feed.availability_checked else None,
+                "message": f"Verfügbarkeit für '{feed.name}' geprüft"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Fehler beim Prüfen der Verfügbarkeit"
+            }), 500
+            
+    except Exception as e:
+        print(f"Fehler bei Verfügbarkeitsprüfung für Feed {feed_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Fehler bei der Verfügbarkeitsprüfung: {str(e)}"
+        }), 500
+
+
+@app.route('/api/search-itunes/<int:episode_id>', methods=['POST'])
+@login_required
+def search_itunes(episode_id):
+    """
+    Sucht eine Episode auf iTunes basierend auf Podcast-Name und Episode-Titel
+    """
+    try:
+        episode = Episode.query.get_or_404(episode_id)
+        feed = PodcastFeed.query.get_or_404(episode.feed_id)
+        
+        # Erstelle iTunes-Suchquery
+        podcast_name = feed.name or "Unknown Podcast"
+        episode_title = episode.title or "Unknown Episode"
+        
+        # iTunes-Suchquery zusammenstellen
+        search_query = f"{podcast_name} {episode_title}".replace(" ", "+")
+        itunes_search_url = f"https://podcasts.apple.com/search?term={search_query}"
+        
+        return jsonify({
+            "success": True,
+            "url": itunes_search_url,
+            "message": f"iTunes-Suche für '{episode_title}' gestartet"
+        }), 200
+        
+    except Exception as e:
+        print(f"Fehler bei iTunes-Suche für Episode {episode_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Fehler bei der iTunes-Suche: {str(e)}"
+        }), 500
+
+
+@app.route('/api/search-youtube/<int:episode_id>', methods=['POST'])
+@login_required
+def search_youtube(episode_id):
+    """
+    Sucht eine Episode auf YouTube basierend auf Podcast-Name und Episode-Titel
+    """
+    try:
+        episode = Episode.query.get_or_404(episode_id)
+        feed = PodcastFeed.query.get_or_404(episode.feed_id)
+        
+        # Erstelle YouTube-Suchquery
+        podcast_name = feed.name or "Unknown Podcast"
+        episode_title = episode.title or "Unknown Episode"
+        
+        # YouTube-Suchquery zusammenstellen
+        search_query = f"{podcast_name} {episode_title}".replace(" ", "+")
+        youtube_search_url = f"https://www.youtube.com/results?search_query={search_query}"
+        
+        return jsonify({
+            "success": True,
+            "url": youtube_search_url,
+            "message": f"YouTube-Suche für '{episode_title}' gestartet"
+        }), 200
+        
+    except Exception as e:
+        print(f"Fehler bei YouTube-Suche für Episode {episode_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Fehler bei der YouTube-Suche: {str(e)}"
+        }), 500
+
+
+@app.route('/update_availability/<int:feed_id>', methods=['POST'])
+@login_required
+def update_availability(feed_id):
+    """
+    Aktualisiert die Verfügbarkeitsinformationen für einen Feed manuell
+    """
+    try:
+        data = request.get_json()
+        platform = data.get('platform')
+        available = data.get('available')
+        
+        if platform not in ['itunes', 'youtube']:
+            return jsonify({'success': False, 'message': 'Ungültige Plattform'}), 400
+        
+        feed = db.session.get(PodcastFeed, feed_id)
+        if not feed:
+            return jsonify({'success': False, 'message': 'Feed nicht gefunden'}), 404
+        
+        # Verfügbarkeit aktualisieren
+        if platform == 'itunes':
+            feed.itunes_available = available
+        elif platform == 'youtube':
+            feed.youtube_available = available
+        
+        feed.availability_checked = datetime.now(timezone.utc)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{platform.capitalize()}-Verfügbarkeit aktualisiert'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Fehler beim Aktualisieren der Verfügbarkeit: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Fehler beim Aktualisieren: {str(e)}'
+        }), 500
+
+
+@app.route('/update_all_feeds', methods=['POST'])
+@login_required
+def update_all_feeds():
+    """
+    Aktualisiert alle aktiven Feeds und führt Verfügbarkeits-Check durch
+    """
+    try:
+        feeds = PodcastFeed.query.filter_by(is_active=True).all()
+        updated_count = 0
+        error_count = 0
+        
+        for feed in feeds:
+            try:
+                # RSS-Feed parsen und aktualisieren
+                feed_data, episodes_data = parse_rss_feed(feed.url)
+                
+                if feed_data:
+                    # Feed-Daten aktualisieren
+                    if feed.name == feed.url or feed.name == 'Unbekannter Podcast':
+                        feed.name = feed_data.get('name', feed.name)
+                    
+                    if feed_data.get('topic') is not None and (feed.topic is None or feed.topic == feed_data['topic']):
+                        feed.topic = feed_data['topic']
+                    
+                    feed.homepage_url = feed_data.get('homepage_url', feed.homepage_url)
+                    feed.last_checked = datetime.now()
+                    
+                    # Bestehende Episoden löschen und neue hinzufügen
+                    Episode.query.filter_by(feed_id=feed.id).delete()
+                    
+                    for ep_data in episodes_data:
+                        ep_data['feed_id'] = feed.id
+                        ep_data.setdefault('is_favorite', False)
+                        episode = Episode(**ep_data)
+                        db.session.add(episode)
+                    
+                    # Verfügbarkeits-Check NICHT durchführen (nur einmalig beim Hinzufügen)
+                    # update_feed_availability(feed.id)
+                    
+                    updated_count += 1
+                else:
+                    error_count += 1
+                    print(f"Fehler beim Parsen von Feed: {feed.url}")
+                    
+            except Exception as e:
+                error_count += 1
+                print(f"Fehler beim Aktualisieren von Feed {feed.url}: {str(e)}")
+                continue
+        
+        db.session.commit()
+        
+        message = f"Aktualisierung abgeschlossen: {updated_count} Feeds erfolgreich aktualisiert"
+        if error_count > 0:
+            message += f", {error_count} Fehler aufgetreten"
+            
+        flash(message, "success" if error_count == 0 else "warning")
+        return jsonify({
+            "success": True,
+            "message": message,
+            "updated_count": updated_count,
+            "error_count": error_count
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f"Fehler beim Aktualisieren aller Feeds: {str(e)}"
+        flash(error_msg, "danger")
+        return jsonify({
+            "success": False,
+            "error": error_msg
+        }), 500
+
+
+
+
+
 if __name__ == '__main__':
     with app.app_context():
         print("DEBUG: SQLALCHEMY_DATABASE_URI wird verwendet:", app.config['SQLALCHEMY_DATABASE_URI'])
@@ -742,4 +1100,3 @@ if __name__ == '__main__':
             
     # Standardmäßig Flask-Entwicklungsserver starten
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
-    

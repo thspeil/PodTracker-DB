@@ -26,7 +26,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px; /* Erhöht für neue Spalten */
             margin: 20px auto;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
@@ -78,6 +78,35 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* NEU: Podchaser-Link Styling */
+        .podchaser-info {
+            margin-top: 5px; /* Weniger Abstand nach oben */
+            margin-bottom: 25px; /* Mehr Abstand nach unten */
+            padding: 10px 10px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            text-align: left;
+        } 
+
+        .podchaser-info p {
+            margin: 0;
+            color: #4a5568;
+            font-size: 16px;
+        }
+
+        .podchaser-link {
+            color: #667eea;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .podchaser-link:hover {
+            color: #5a67d8;
+            text-decoration: underline;
         }
 
         .filter-container {
@@ -218,6 +247,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed; /* Feste Spaltenbreiten */
         }
 
         th, td {
@@ -226,7 +256,19 @@
             border-bottom: 1px solid #e2e8f0;
             vertical-align: top;
             line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
+
+        /* Spezifische Spaltenbreiten */
+        th:nth-child(1), td:nth-child(1) { width: 20%; } /* Podcast-Name */
+        th:nth-child(2), td:nth-child(2) { width: 35%; } /* Episode */
+        th:nth-child(3), td:nth-child(3) { width: 12%; } /* Datum */
+        th:nth-child(4), td:nth-child(4) { width: 15%; } /* Host */
+        th:nth-child(5), td:nth-child(5) { width: 6%; }  /* Transkript-Suche */
+        th:nth-child(6), td:nth-child(6) { width: 6%; }  /* YouTube-Suche */
+        th:nth-child(7), td:nth-child(7) { width: 6%; }  /* Favorit */
 
         th {
             background: linear-gradient(45deg, #f7fafc, #edf2f7);
@@ -423,22 +465,76 @@
             text-align: center; /* Text zentrieren */
         }
         
-        .feed-header-col.header-actions { /* NEU: Für Aktualisieren und Entfernen */
-            flex: 0 0 160px; /* Breite für beide Buttons */
+        .feed-header-col.header-itunes,
+        .feed-header-col.header-youtube,
+        .feed-availability-container {
+            flex-basis: 40px;
+            flex-grow: 0;
+            flex-shrink: 0;
             display: flex;
-            justify-content: center; /* Zentriert die Buttons */
+            justify-content: center;
+            align-items: center;
+            padding: 4px;
+            text-align: center; /* Center the icons */
+        }
+        
+        /* Zusätzliche Zentrierung für die Header-Icons */
+        .feed-header-col.header-itunes,
+        .feed-header-col.header-youtube {
+            font-size: 16px !important;
+            text-align: center !important;
+            justify-content: center !important;
+        }
+        
+        .availability-checkbox {
+            cursor: pointer;
+        }
+        
+        .availability-checkbox:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        .feed-header-col.header-actions { /* NEU: Für Aktualisieren und Entfernen */
+            flex: 0 0 100px; /* Schmaler für Icon-Buttons */
+            display: flex;
+            justify-content: center; /* Zentriert die Überschrift */
             align-items: center;
             gap: 8px; /* Abstand zwischen den Buttons */
             padding-right: 5px; /* Etwas Innenabstand */
         }
-
+        
+        .icon-button {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .icon-button:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .update-single-feed {
+            font-size: 18px; /* Größer für 🔄 */
+        }
+        
+        .remove-feed {
+            font-size: 16px; /* Normal für 🗑️ */
+        }
+        
         .feed-item {
             display: flex;
             align-items: center;
-            padding: 3px 16px; 
-            background: #f8fafc;
+            padding: 3px 10px !important; /* Reduziert von 6px auf 3px und !important hinzugefügt */
+            border-bottom: 1px solid #e5e7eb;
+            gap: 10px;
+            background: #f8fafc !important; /* Normaler Hintergrund wiederhergestellt */
             border-radius: 6px;
-            margin-bottom: 3px; 
+            margin-bottom: 1px !important; /* Reduziert von 1.5px auf 1px und !important hinzugefügt */
         }
 
         .feed-item:last-child {
@@ -447,18 +543,38 @@
 
         /* Styling für den "Entfernen"-Button im Feed-Item */
         .remove-feed {
-            padding: 3px 6px;
-            font-size: 13px;
+            padding: 6px 12px;
+            font-size: 16px; /* Normal für 🗑️ */
             flex-shrink: 0; 
-            @apply bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-150 ease-in-out;
+            background: none; /* Kein Hintergrund */
+            color: inherit; /* Normale Textfarbe */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .remove-feed:hover {
+            background-color: #f3f4f6; /* Nur bei Hover */
+            transform: translateY(-1px);
         }
 
         /* Styling für den "Aktualisieren"-Button im Feed-Item */
-        .update-single-feed { /* NEU */
-            padding: 3px 6px;
-            font-size: 13px;
+        .update-single-feed {
+            padding: 6px 12px;
+            font-size: 18px; /* Größer für 🔄 */
             flex-shrink: 0;
-            @apply bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-150 ease-in-out;
+            background: none; /* Kein Hintergrund */
+            color: inherit; /* Normale Textfarbe */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .update-single-feed:hover {
+            background-color: #f3f4f6; /* Nur bei Hover */
+            transform: translateY(-1px);
         }
 
 
@@ -518,6 +634,93 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* NEU: Styling für Transkript- und YouTube-Such-Buttons */
+        .itunes-search-header, .youtube-search-header,
+        .itunes-search-cell, .youtube-search-cell {
+            width: 45px;
+            text-align: center;
+            padding: 4px;
+        }
+        .itunes-search-btn, .youtube-search-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            color: #9ca3af; /* Grau als Standard */
+        }
+
+        /* Verfügbarkeitszustände */
+        .itunes-search-btn.available, .youtube-search-btn.available {
+            color: #10b981; /* Grün für verfügbar */
+        }
+
+        .itunes-search-btn.unavailable, .youtube-search-btn.unavailable {
+            color: #d1d5db; /* Hellgrau für nicht verfügbar */
+            cursor: pointer !important; /* Bleibt klickbar, kein Verbotsschild - verstärkt */
+            opacity: 0.5;
+        }
+
+        .itunes-search-btn.unknown, .youtube-search-btn.unknown {
+            color: #6b7280; /* Mittelgrau für unbekannt */
+        }
+
+        .itunes-search-btn:hover, .youtube-search-btn:hover {
+            background: #f3f4f6;
+            transform: scale(1.1);
+        }
+
+        .itunes-search-btn.unavailable:hover, .youtube-search-btn.unavailable:hover {
+            background: transparent;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .itunes-search-btn.loading, .youtube-search-btn.loading {
+            color: #3b82f6; /* Blau beim Laden */
+            animation: pulse 1s infinite;
+        }
+
+        .itunes-search-btn.success {
+            color: #10b981; /* Grün bei Erfolg */
+        }
+
+        .itunes-search-btn.failed {
+            color: #ef4444; /* Rot bei Misserfolg */
+        }
+
+        .youtube-search-btn.success {
+            color: #ff0000; /* YouTube-Rot bei Erfolg */
+        }
+
+        .youtube-search-btn.failed {
+            color: #ef4444; /* Rot bei Misserfolg */
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Tooltip-Styling */
+        .itunes-search-btn[title]:hover::after,
+        .youtube-search-btn[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2d3748;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -559,7 +762,7 @@
             /* Adjustments for mobile view of feed list */
             .feed-list-header, .feed-item {
                 flex-wrap: wrap; 
-                padding: 6px 10px; 
+                padding: 3px 10px !important; /* Auch hier reduziert und !important */
             }
 
             .feed-header-col, .feed-item > * {
@@ -584,6 +787,18 @@
                 white-space: normal; 
                 word-break: break-word; 
                 max-width: none; 
+            }
+
+            /* Mobile anpassungen für Such-Buttons */
+            .itunes-search-header, .youtube-search-header,
+            .transcript-search-cell, .youtube-search-cell {
+                width: 35px;
+                padding: 2px;
+            }
+
+            .itunes-search-btn, .youtube-search-btn {
+                padding: 4px;
+                font-size: 14px;
             }
         }
 
@@ -615,14 +830,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 1000;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .modal-overlay.active {
@@ -634,113 +849,193 @@
             background: white;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            max-width: 400px;
+            max-width: 500px;
             width: 90%;
-            transform: translateY(-20px);
+            text-align: center;
+            transform: scale(0.8);
             transition: transform 0.3s ease;
         }
 
         .modal-overlay.active .modal-content {
-            transform: translateY(0);
+            transform: scale(1);
         }
 
         .modal-content h3 {
-            color: #2d3748;
             margin-bottom: 15px;
-            font-size: 1.5em;
+            color: #2d3748;
+            font-size: 1.2em;
         }
 
         .modal-content p {
-            color: #4a5568;
             margin-bottom: 25px;
+            color: #4a5568;
             line-height: 1.5;
         }
 
         .modal-buttons {
             display: flex;
-            justify-content: center;
             gap: 15px;
+            justify-content: center;
         }
 
-        .modal-buttons button {
+        .btn-cancel, .btn-confirm {
             padding: 10px 20px;
+            border: none;
             border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .modal-buttons .btn-confirm {
-            background: linear-gradient(45deg, #e53e3e, #c53030);
-            color: white;
-            border: none;
-        }
-
-        .modal-buttons .btn-confirm:hover {
-            box-shadow: 0 5px 15px rgba(229, 62, 62, 0.3);
-        }
-
-        .modal-buttons .btn-cancel {
+        .btn-cancel {
             background: #e2e8f0;
             color: #4a5568;
-            border: none;
         }
 
-        .modal-buttons .btn-cancel:hover {
+        .btn-cancel:hover {
             background: #cbd5e0;
         }
 
+        .btn-confirm {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #5a67d8;
+        }
+
+        /* Button Styling */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Notification Styling */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: #10b981;
+        }
+
+        .notification.error {
+            background: #ef4444;
+        }
+
+        .notification.warning {
+            background: #f59e0b;
+        }
+
+        .notification.info {
+            background: #3b82f6;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
-
-    <!-- Flash Nachrichten Bereich (Flask Flash Messages) -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="fixed top-4 right-4 z-[1001] space-y-2 w-full max-w-sm">
-            {% for category, message in messages %}
-                <div class="flash-message flash-{{ category }} rounded-lg shadow-lg text-sm p-3">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %} 
-
     <div class="container">
-        <!-- Header mit App-Name und Logout-Button -->
-        <div class="flex justify-between items-center mb-10">
-            <h1 class="text-5xl">🎧 Podcast Episode Tracker</h1>
-            {% if current_user.is_authenticated %}
-                <!-- Reihenfolge getauscht und Hallo-Text fett -->
-                <div class="flex items-center gap-4"> <!-- Added flex container for alignment -->
-                    <span class="ml-4 text-gray-700 font-bold">Hallo, {{ current_user.username }}</span> 
-                    <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center group" title="Abmelden">
-                        <svg class="w-5 h-5 mr-2 text-gray-600 group-hover:text-gray-800 transition duration-150 ease-in-out" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1"></path>
-                        </svg>
-                        Abmelden
-                    </a>
-                </div>
-            {% endif %}
+        <!-- Header mit Titel und Benutzerinformationen in einer Zeile -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 20px 0;">
+            <h1 class="text-4xl font-bold" style="color: #2d3748; margin: 0;">🎧 Podcast Episode Tracker</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="font-weight: 500; color: #4a5568; font-size: 16px;">Hallo, {{ username }}</span>
+                <a href="/logout" style="color: #667eea; text-decoration: none; font-size: 14px; padding: 8px 16px; border: 1px solid #667eea; border-radius: 8px; transition: all 0.3s; display: flex; align-items: center; gap: 6px; background: white;">
+                    <span style="font-size: 12px;">🚪</span>
+                    Abmelden
+                </a>
+            </div>
         </div>
         
+        <!-- Positioniert unterhalb der Flask Flash Messages -->
+        <div id="statusContainer" class="fixed top-4 right-4 z-[1000] space-y-2 w-full max-w-sm"> 
+            <div class="flash-message" id="status" style="display: none;"></div>
+        </div>
+
         <div class="controls">
             <div class="input-group">
                 <input type="url" id="rssUrl" placeholder="RSS Feed URL eingeben (z.B. https://example.com/feed.xml)">
-                <!-- Button mit Tailwind-Klassen -->
                 <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="addFeed()">Feed hinzufügen</button>
             </div>
-            <!-- Button mit Tailwind-Klassen -->
-            <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="refreshAll()">Alle aktualisieren</button>
+            <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="updateAllFeeds()">Alle aktualisieren</button>
             <input type="file" id="importFeedsXLSXFile" accept=".xlsx" style="display: none;" onchange="importFeedsFromXLSX(event)">
-            <!-- Button mit Tailwind-Klassen -->
             <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="document.getElementById('importFeedsXLSXFile').click()">Feeds importieren (XLSX)</button>
         </div>
-        
+
+        <!-- NEU: Podchaser-Info-Bereich -->
+        <div class="podchaser-info">
+            <p>Podcasts und Transkripte suchen bei <a href="https://www.podchaser.com/podcasts" target="_blank" class="podchaser-link">Podchaser</a></p>
+        </div>
+
         <div class="filter-container">
             <div class="filter-row">
                 <div class="filter-group">
@@ -759,9 +1054,37 @@
                         <option value="all">Alle</option>
                         <option value="10">Letzte 10</option>
                         <option value="20">Letzte 20</option>
-                        <option value="30" selected>Letzte 30</option> <!-- Standardwert auf 30 gesetzt -->
+                        <option value="30" selected>Letzte 30</option>
                         <option value="50">Letzte 50</option>
                         <option value="100">Letzte 100</option>
+                    </select>
+                    <label for="podcastFilter" style="margin-left: 20px;">Podcast:</label>
+                    <select id="podcastFilter" onchange="applyFilters()" style="min-width: 150px; max-width: 500px;">
+                        <option value="">Alle Podcasts</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="topicFilter">Thema:</label>
+                    <select id="topicFilter" onchange="applyFilters()">
+                        <option value="">Alle Themen</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="favoriteFilter">Favoriten:</label>
+                    <select id="favoriteFilter" onchange="applyFilters()">
+                        <option value="">Alle</option>
+                        <option value="true">Nur Favoriten</option>
+                        <option value="false">Keine Favoriten</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="activeFilter">Status:</label>
+                    <select id="activeFilter" onchange="applyFilters()">
+                        <option value="">Alle Feeds</option>
+                        <option value="true">Nur aktive Feeds</option>
+                        <option value="false">Nur inaktive Feeds</option>
                     </select>
                 </div>
             </div>
@@ -769,29 +1092,26 @@
 
         <div class="search-container">
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 Suche nach Stichworten in allen Spalten..." oninput="applyFilters()">
-                <!-- Spezifische Klasse für den Clear-Button im Suchfeld -->
-                <button class="clear-search-btn" onclick="clearSearch()">✕</button>
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Episoden durchsuchen..." oninput="searchEpisodes()" />
+                <button class="clear-search-btn" onclick="clearSearch()">Löschen</button>
             </div>
-            <div class="search-stats" id="searchStats"></div>
         </div>
 
-        <div class="podcast-feeds" id="podcastFeeds">
-            <div class="feeds-header" onclick="toggleFeedsList()" style="display: none;">
-                <span class="feeds-toggle" id="feedsToggle">▼</span>
+        <div class="podcast-feeds">
+            <div class="feeds-header" onclick="toggleFeedsList()">
+                <span id="feedsToggle" class="feeds-toggle">▼</span>
                 <span>Podcast-Feeds (<span id="feedCount">0</span>)</span>
             </div>
-            <div class="feeds-content" id="feedsContent"></div>
+            <div class="feeds-content" id="feedsContent">
+                <!-- Feed-Liste wird hier dynamisch eingefügt -->
+            </div>
         </div>
 
-        <!-- Button mit Tailwind-Klassen -->
+        <!-- Export-Button vor der Tabelle -->
         <button class="py-2 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out" onclick="exportToXLSX()" style="margin-bottom: 20px;">Ergebnisse als XLSX exportieren</button>
-
-        <!-- Das Status-Element ist jetzt fest positioniert und nutzt flash-message Klassen -->
-        <!-- Positioniert unterhalb der Flask Flash Messages -->
-        <div id="statusContainer" class="fixed top-4 right-4 z-[1000] space-y-2 w-full max-w-sm"> 
-            <div class="flash-message" id="status" style="display: none;"></div>
-        </div>
 
         <div class="table-container">
             <table id="episodeTable">
@@ -801,12 +1121,14 @@
                         <th>Episode</th>
                         <th>Datum</th>
                         <th>Host</th>
-                        <th>Favorit</th>
+                        <th class="itunes-search-header" title="auf iTunes suchen">🎵</th>
+                        <th class="youtube-search-header" title="YouTube suchen">📺</th>
+                        <th title="Favorit">⭐</th>
                     </tr>
                 </thead>
                 <tbody id="episodeTableBody">
                     <tr>
-                        <td colspan="5" class="empty-state">
+                        <td colspan="7" class="empty-state">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
                         </svg>
@@ -874,6 +1196,99 @@
                 }
             });
         });
+
+        // NEU: iTunes-Suchfunktion
+        async function searchItunes(episodeId) {
+            const button = document.querySelector(`.itunes-search-btn[data-episode-id="${episodeId}"]`);
+            
+            // Immer klickbar - keine Blockierung mehr
+            
+            setButtonState(button, 'loading');
+            
+            try {
+                const response = await fetch(`/api/search-itunes/${episodeId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    setButtonState(button, 'success');
+                    window.open(result.url, '_blank');
+                    showNotification('iTunes-Suche gestartet!', 'success');
+                } else {
+                    setButtonState(button, 'failed');
+                    showNotification('iTunes-Suche fehlgeschlagen', 'warning');
+                }
+            } catch (error) {
+                setButtonState(button, 'failed');
+                showNotification('Fehler bei der iTunes-Suche', 'error');
+            }
+        }
+
+        // NEU: YouTube-Suchfunktion
+        async function searchYouTube(episodeId) {
+            const button = document.querySelector(`.youtube-search-btn[data-episode-id="${episodeId}"]`);
+            
+            // Immer klickbar - keine Blockierung mehr
+            
+            setButtonState(button, 'loading');
+            
+            try {
+                const response = await fetch(`/api/search-youtube/${episodeId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    setButtonState(button, 'success');
+                    window.open(result.url, '_blank');
+                    showNotification('YouTube-Suche gestartet!', 'success');
+                    
+                    // Update der Tabelle mit YouTube-Link (falls direkter Link gefunden)
+                    if (result.direct_link) {
+                        updateEpisodeYouTubeLink(episodeId, result.direct_link);
+                    }
+                } else {
+                    setButtonState(button, 'failed');
+                    showNotification('YouTube-Suche fehlgeschlagen', 'warning');
+                }
+            } catch (error) {
+                setButtonState(button, 'failed');
+                showNotification('Fehler bei der YouTube-Suche', 'error');
+            }
+        }
+
+        // NEU: Button-Status setzen
+        function setButtonState(button, state) {
+            button.classList.remove('loading', 'success', 'failed');
+            if (state !== 'default') {
+                button.classList.add(state);
+            }
+        }
+
+        // NEU: Notification anzeigen
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // NEU: YouTube-Link in Episode aktualisieren
+        function updateEpisodeYouTubeLink(episodeId, youtubeUrl) {
+            const episode = allEpisodes.find(ep => ep.id === episodeId);
+            if (episode) {
+                episode.youtube_url = youtubeUrl;
+                // Optional: Tabelle neu rendern oder nur die entsprechende Zeile aktualisieren
+            }
+        }
 
         // Funktion zum Anzeigen des benutzerdefinierten Bestätigungsmodals
         function showConfirmationModal(message) {
@@ -1087,7 +1502,9 @@
                     <div class="feed-header-col header-podcast-name">Podcast-Name</div>
                     <div class="feed-header-col header-rss-url">RSS-Adresse</div>
                     <div class="feed-header-col header-topic">Thema</div>
-                    <div class="feed-header-col header-actions">Aktionen</div> <!-- Geänderter Header -->
+                    <div class="feed-header-col header-itunes">🎵</div>
+                    <div class="feed-header-col header-youtube">📺</div>
+                    <div class="feed-header-col header-actions">Aktionen</div>
                 </div>
             `;
 
@@ -1100,6 +1517,18 @@
                     `<a href="${feed.homepage_url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>` :
                     `${highlightText(podcastName, currentSearchTerm)}`;
 
+                // iTunes/YouTube-Verfügbarkeit
+                const itunesAvailable = feed.itunes_available;
+                const youtubeAvailable = feed.youtube_available;
+                
+                const itunesChecked = itunesAvailable === true ? 'checked' : '';
+                const itunesDisabled = ''; // Immer editierbar
+                const itunesTitle = 'iTunes-Verfügbarkeit';
+                
+                const youtubeChecked = youtubeAvailable === true ? 'checked' : '';
+                const youtubeDisabled = ''; // Immer editierbar  
+                const youtubeTitle = 'YouTube-Verfügbarkeit';
+
                 return `
                     <div class="feed-item">
                         <div class="feed-checkbox-container"> 
@@ -1110,9 +1539,21 @@
                         <div class="feed-podcast-name" title="${podcastName}">${podcastLinkHtml}</div>
                         <div class="feed-url" title="${feed.url}">${feed.url}</div>
                         <span class="editable feed-topic" onclick="makeEditableFeedTopic(this, ${feed.id})">${highlightText(feedTopic, currentSearchTerm)}</span>
-                        <div class="flex items-center gap-2"> <!-- Container for buttons -->
-                            <button class="update-single-feed" onclick="refreshFeedEpisodes(${feed.id})">Aktualisieren</button> <!-- Hinzugefügter Button -->
-                            <button class="remove-feed" onclick="removeFeed(${feed.id})">Entfernen</button>
+                        <div class="feed-availability-container">
+                            <input type="checkbox" class="availability-checkbox" 
+                                   ${itunesChecked} ${itunesDisabled}
+                                   title="${itunesTitle}"
+                                   onclick="toggleAvailability(${feed.id}, 'itunes', this)">
+                        </div>
+                        <div class="feed-availability-container">
+                            <input type="checkbox" class="availability-checkbox" 
+                                   ${youtubeChecked} ${youtubeDisabled}
+                                   title="${youtubeTitle}"
+                                   onclick="toggleAvailability(${feed.id}, 'youtube', this)">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="update-single-feed icon-button" onclick="refreshFeedEpisodes(${feed.id})" title="Aktualisieren">🔄</button>
+                            <button class="remove-feed icon-button" onclick="removeFeed(${feed.id})" title="Entfernen">🗑️</button>
                         </div>
                     </div>
                 `;
@@ -1122,6 +1563,45 @@
 
             if (!feedsCollapsed) {
                 feedsContent.style.maxHeight = feedsContent.scrollHeight + 'px';
+            }
+        }
+
+        async function toggleAvailability(feedId, platform, checkbox) {
+            try {
+                const newValue = checkbox.checked;
+                
+                // Backend-Update
+                const response = await fetchData(`/update_availability/${feedId}`, 'POST', {
+                    platform: platform,
+                    available: newValue
+                });
+                
+                if (response && response.success) {
+                    // Lokale Daten aktualisieren
+                    const feed = allFeeds.find(f => f.id === feedId);
+                    if (feed) {
+                        if (platform === 'itunes') {
+                            feed.itunes_available = newValue;
+                        } else if (platform === 'youtube') {
+                            feed.youtube_available = newValue;
+                        }
+                    }
+                    
+                    // WICHTIG: Feed-Liste und Episode-Icons sofort neu rendern
+                    updateFeedsList();
+                    updateEpisodeTable(allEpisodes);
+                    
+                    showStatus(`${platform === 'itunes' ? 'iTunes' : 'YouTube'}-Verfügbarkeit aktualisiert`, 'success');
+                } else {
+                    // Bei Fehler Checkbox zurücksetzen
+                    checkbox.checked = !newValue;
+                    const errorMsg = response?.message || 'Unbekannter Fehler';
+                    showStatus(`Fehler beim Aktualisieren der ${platform === 'itunes' ? 'iTunes' : 'YouTube'}-Verfügbarkeit: ${errorMsg}`, 'danger');
+                }
+            } catch (error) {
+                // Bei Fehler Checkbox zurücksetzen
+                checkbox.checked = !checkbox.checked;
+                showStatus(`Fehler beim Aktualisieren der Verfügbarkeit: ${error.message}`, 'danger');
             }
         }
 
@@ -1169,335 +1649,393 @@
             if (response && response.message) {
                 showStatus(response.message, 'success');
                 await loadDataFromBackend(); // Wichtig: Daten neu laden nach Aktualisierung
-            } else if (response && response.error) {
+            } else if (response && response.error) { // NEU: Fehlerbehandlung
                 showStatus(`Fehler beim Aktualisieren der Episoden: ${response.error}`, 'danger');
             } else {
                 showStatus('Unbekannter Fehler beim Aktualisieren der Episoden', 'danger');
             }
         }
 
-        function formatDate(dateString) {
-            if (!dateString) return 'Unbekannt';
-            
-            try {
-                const date = new Date(dateString);
-                if (isNaN(date.getTime())) return 'Unbekannt';
-                
-                return date.toLocaleDateString('de-DE', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                });
-            } catch (error) {
-                return 'Unbekannt';
+        async function updateAllFeeds() {
+            showStatus('Aktualisiere alle Feeds...', 'loading');
+            const response = await fetchData('/update_all_feeds', 'POST');
+            if (response && response.message) {
+                showStatus(response.message, 'success');
+                await loadDataFromBackend();
+            } else if (response && response.error) { // NEU: Fehlerbehandlung
+                showStatus(`Fehler beim Aktualisieren aller Feeds: ${response.error}`, 'danger');
+            } else {
+                showStatus('Unbekannter Fehler beim Aktualisieren aller Feeds', 'danger');
             }
-        }
-
-        function highlightText(text, searchTerm) {
-            if (!searchTerm) return text;
-            
-            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            return text.replace(regex, '<span class="highlight">$1</span>');
-        }
-
-        function searchEpisodes(searchTerm, episodes) {
-            if (!searchTerm) {
-                return [...episodes];
-            }
-
-            const term = searchTerm.toLowerCase();
-            return episodes.filter(episode => {
-                const feed = allFeeds.find(f => f.id === episode.feed_id);
-                const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
-                const topic = feed ? feed.topic : '';
-
-                return podcastName.toLowerCase().includes(term) ||
-                    episode.title.toLowerCase().includes(term) ||
-                    episode.description.toLowerCase().includes(term) ||
-                    topic.toLowerCase().includes(term) ||
-                    (episode.host && episode.host.toLowerCase().includes(term)); 
-            });
-        }
-
-        function applyTimeFilter(episodes) {
-            const timeFilter = document.getElementById('timeFilter').value;
-            if (timeFilter === 'all') return episodes;
-
-            const now = new Date();
-            const filterDate = new Date();
-
-            switch (timeFilter) {
-                case 'week':
-                    filterDate.setDate(now.getDate() - 7);
-                    break;
-                case 'month':
-                    filterDate.setMonth(now.getMonth() - 1);
-                    break;
-                case 'quarter':
-                    filterDate.setMonth(now.getMonth() - 3);
-                    break;
-                case 'year':
-                    filterDate.setFullYear(now.getFullYear() - 1);
-                    break;
-            }
-
-            return episodes.filter(episode => {
-                const episodeDate = new Date(episode.pub_date); 
-                return episodeDate >= filterDate;
-            });
-        }
-
-        function applyCountFilter(episodes) {
-            const countFilter = document.getElementById('countFilter').value;
-            if (countFilter === 'all') return episodes;
-
-            const count = parseInt(countFilter);
-            return episodes.slice(0, count);
         }
 
         function applyFilters() {
-            const searchInput = document.getElementById('searchInput');
-            currentSearchTerm = searchInput.value.trim();
-            
-            let episodes = [...allEpisodes];
-            
-            episodes = episodes.filter(episode => {
+            const timeFilter = document.getElementById('timeFilter').value;
+            const countFilter = document.getElementById('countFilter').value;
+            const podcastFilter = document.getElementById('podcastFilter').value;
+            const topicFilter = document.getElementById('topicFilter').value;
+            const favoriteFilter = document.getElementById('favoriteFilter').value;
+            const activeFilter = document.getElementById('activeFilter').value;
+
+            // Start with all episodes
+            let filtered = [...allEpisodes];
+
+            // Apply time filter first
+            if (timeFilter !== 'all') {
+                const now = new Date();
+                let cutoffDate;
+                
+                switch (timeFilter) {
+                    case 'week':
+                        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        break;
+                    case 'month':
+                        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        break;
+                    case 'quarter':
+                        cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                        break;
+                    case 'year':
+                        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                        break;
+                }
+                
+                if (cutoffDate) {
+                    filtered = filtered.filter(episode => 
+                        new Date(episode.pub_date) >= cutoffDate
+                    );
+                }
+            }
+
+            // Apply other filters
+            filtered = filtered.filter(episode => {
                 const feed = allFeeds.find(f => f.id === episode.feed_id);
-                return feed && feed.is_active;
+                if (!feed) return false;
+
+                // Podcast-Filter
+                if (podcastFilter && feed.name !== podcastFilter) return false;
+
+                // Thema-Filter
+                if (topicFilter && feed.topic !== topicFilter) return false;
+
+                // Favoriten-Filter
+                if (favoriteFilter === 'true' && !episode.is_favorite) return false;
+                if (favoriteFilter === 'false' && episode.is_favorite) return false;
+
+                // Aktiv-Filter
+                if (activeFilter === 'true' && !feed.is_active) return false;
+                if (activeFilter === 'false' && feed.is_active) return false;
+
+                return true;
             });
 
-            episodes = searchEpisodes(currentSearchTerm, episodes);
-            
-            episodes = [...episodes].sort((a, b) => {
-                const dateA = new Date(a.pub_date);
-                const dateB = new Date(b.pub_date);
-                return dateB - dateA;
-            });
-            
-            episodes = applyTimeFilter(episodes);
-            
-            episodes = applyCountFilter(episodes);
-            
-            filteredEpisodes = episodes;
-            updateTable();
-            updateSearchStats();
+            // Apply count filter (after other filters)
+            if (countFilter !== 'all') {
+                const count = parseInt(countFilter);
+                filtered = filtered.slice(0, count);
+            }
+
+            filteredEpisodes = filtered;
+            searchEpisodes();
+            updateFilterOptions();
         }
 
-        function updateSearchStats() {
-            const statsElement = document.getElementById('searchStats');
-            
-            if (currentSearchTerm) {
-                const totalEpisodes = allEpisodes.length;
-                const filteredCount = filteredEpisodes.length;
-                statsElement.textContent = `${filteredCount} von ${totalEpisodes} Episoden gefunden für "${currentSearchTerm}"`;
-                statsElement.classList.add('active');
-            } else {
-                statsElement.classList.remove('active');
+        function updateFilterOptions() {
+            const podcastFilter = document.getElementById('podcastFilter');
+            const topicFilter = document.getElementById('topicFilter');
+
+            // Podcast-Optionen aktualisieren
+            const currentPodcast = podcastFilter.value;
+            podcastFilter.innerHTML = '<option value="">Alle Podcasts</option>';
+            const uniquePodcasts = [...new Set(allFeeds.map(feed => feed.name).filter(name => name))];
+            uniquePodcasts.sort().forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                if (name === currentPodcast) option.selected = true;
+                podcastFilter.appendChild(option);
+            });
+
+            // Thema-Optionen aktualisieren
+            const currentTopic = topicFilter.value;
+            topicFilter.innerHTML = '<option value="">Alle Themen</option>';
+            const uniqueTopics = [...new Set(allFeeds.map(feed => feed.topic).filter(topic => topic))];
+            uniqueTopics.sort().forEach(topic => {
+                const option = document.createElement('option');
+                option.value = topic;
+                option.textContent = topic;
+                if (topic === currentTopic) option.selected = true;
+                topicFilter.appendChild(option);
+            });
+        }
+
+        function searchEpisodes() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            currentSearchTerm = searchTerm;
+
+            let episodesToShow = filteredEpisodes;
+
+            if (searchTerm) {
+                episodesToShow = filteredEpisodes.filter(episode => {
+                    const feed = allFeeds.find(f => f.id === episode.feed_id);
+                    const podcastName = feed ? (feed.name || feed.url) : '';
+                    
+                    return (
+                        episode.title.toLowerCase().includes(searchTerm) ||
+                        podcastName.toLowerCase().includes(searchTerm) ||
+                        (episode.host && episode.host.toLowerCase().includes(searchTerm))
+                    );
+                });
             }
+
+            updateEpisodeTable(episodesToShow);
         }
 
         function clearSearch() {
             document.getElementById('searchInput').value = '';
             currentSearchTerm = '';
-            applyFilters();
+            searchEpisodes();
         }
 
-        async function makeEditableFeedTopic(element, feedId) {
-            const feed = allFeeds.find(f => f.id === feedId);
-            if (!feed) return;
-
-            const currentValue = feed.topic || '';
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = currentValue;
-            input.className = 'editable-input';
+        function updateEpisodeTable(episodes) {
+            const tableBody = document.getElementById('episodeTableBody');
             
-            element.innerHTML = '';
-            element.appendChild(input);
-            element.classList.add('editing');
-            
-            input.focus();
-            input.select();
-            
-            function saveEdit() {
-                const newValue = input.value.trim();
-                if (newValue !== currentValue) {
-                    showStatus('Aktualisiere Thema...', 'loading');
-                    // KORREKTUR: Endpoint auf `/feeds/:id` und Methode PUT geändert
-                    // KORREKTUR: Datenobjekt für PUT-Request klar definieren
-                    fetchData(`/feeds/${feedId}`, 'PUT', { topic: newValue }) 
-                        .then(response => {
-                            if (response) {
-                                showStatus('Thema aktualisiert', 'success');
-                                loadDataFromBackend(); 
-                            } else { 
-                                showStatus(`Fehler beim Aktualisieren des Themas.`, 'danger');
-                            }
-                        });
-                } else {
-                    // If value is the same, just revert UI and show info
-                    showStatus('Thema unverändert.', 'info');
-                }
-                element.textContent = newValue || 'Klicken zum Bearbeiten'; 
-                element.classList.remove('editing');
-            }
-            
-            input.addEventListener('blur', saveEdit);
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    saveEdit();
-                }
-            });
-        }
-
-        async function toggleFavorite(episodeId, starElement) {
-            const episode = allEpisodes.find(ep => ep.id === episodeId);
-            if (!episode) return;
-
-            const newFavoriteStatus = !episode.is_favorite;
-            
-            showStatus('Aktualisiere Favoritenstatus...', 'loading');
-            // KORREKTUR: Endpoint auf `/episodes/:id` und Methode PUT geändert
-            const response = await fetchData(`/episodes/${episode.id}`, 'PUT', { is_favorite: newFavoriteStatus }); 
-
-            if (response) {
-                episode.is_favorite = newFavoriteStatus;
-                
-                if (newFavoriteStatus) {
-                    starElement.textContent = '⭐';
-                    starElement.className = 'favorite-star active';
-                } else {
-                    starElement.textContent = '☆';
-                    starElement.className = 'favorite-star inactive';
-                }
-                showStatus('Favoritenstatus aktualisiert', 'success');
-            } else {
-                // Revert UI if API call failed
-                starElement.textContent = episode.is_favorite ? '⭐' : '☆';
-                starElement.className = `favorite-star ${episode.is_favorite ? 'active' : 'inactive'}`;
-                showStatus(`Fehler beim Aktualisieren des Favoritenstatus.`, 'danger'); 
-            }
-        }
-
-        function updateTable() {
-            const tbody = document.getElementById('episodeTableBody');
-            
-            if (filteredEpisodes.length === 0) {
-                if (currentSearchTerm) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="no-results">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                </svg>
-                                <h3>Keine Ergebnisse gefunden</h3>
-                                <p>Keine Episoden entsprechen den Suchkriterien "${currentSearchTerm}"</p>
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="empty-state">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            if (episodes.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="no-results">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33"/>
                             </svg>
-                                <h3>Noch keine Podcast-Feeds hinzugefügt</h3>
-                                <p>Fügen Sie RSS-Feeds hinzu und aktualisieren Sie, um Episoden zu sehen</p>
-                            </td>
-                        </tr>
-                    `;
-                }
+                            <h3>Keine Episoden gefunden</h3>
+                            <p>Versuchen Sie andere Suchbegriffe oder Filter</p>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
 
-            tbody.innerHTML = filteredEpisodes.map(episode => {
+            const episodeRows = episodes.map(episode => {
                 const feed = allFeeds.find(f => f.id === episode.feed_id);
-                // Use episode.podcast_name from backend, fallback to feed.name or feed.url
-                const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
-                const host = episode.host || 'N/A'; 
+                const podcastName = feed ? (feed.name || feed.url) : 'Unbekannt';
+                const episodeId = getEpisodeId(episode);
                 
-                // Episode Title linking
-                const episodeTitleLinkHtml = episode.url ?
-                    `<a href="${episode.url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${highlightText(episode.title, currentSearchTerm)}</a>` :
-                    `${highlightText(episode.title, currentSearchTerm)}`;
-
-                // KORREKTUR: Podcast-Name in der Tabelle verlinken und fett, Farbe auf blau
-                const podcastNameLinkHtml = (feed && feed.homepage_url) ?
-                    `<a href="${feed.homepage_url}" target="_blank" rel="noopener noreferrer" class="font-bold text-blue-600 hover:underline">${highlightText(podcastName, currentSearchTerm)}</a>` :
-                    `<span class="font-bold text-gray-900">${highlightText(podcastName, currentSearchTerm)}</span>`;
-
+                // Verfügbarkeitsstatus bestimmen
+                const itunesAvailable = feed ? feed.itunes_available : null;
+                const youtubeAvailable = feed ? feed.youtube_available : null;
+                
+                // iTunes Button-Styling basierend auf Verfügbarkeit
+                const itunesButtonClass = itunesAvailable === true ? 'itunes-search-btn available' : 
+                                         itunesAvailable === false ? 'itunes-search-btn unavailable' : 
+                                         'itunes-search-btn unknown';
+                const itunesTitle = itunesAvailable === true ? 'auf iTunes suchen' :
+                                   itunesAvailable === false ? 'Vermutlich keine Episode verfügbar. Dennoch suchen? Klicken.' :
+                                   'auf iTunes suchen (Verfügbarkeit unbekannt)';
+                const itunesDisabled = ''; // Immer klickbar
+                
+                // YouTube Button-Styling basierend auf Verfügbarkeit
+                const youtubeButtonClass = youtubeAvailable === true ? 'youtube-search-btn available' : 
+                                          youtubeAvailable === false ? 'youtube-search-btn unavailable' : 
+                                          'youtube-search-btn unknown';
+                const youtubeTitle = youtubeAvailable === true ? 'YouTube suchen' :
+                                    youtubeAvailable === false ? 'Vermutlich keine Episode verfügbar. Dennoch suchen? Klicken.' :
+                                    'YouTube suchen (Verfügbarkeit unbekannt)';
+                const youtubeDisabled = ''; // Immer klickbar
+                
+                // KORREKTUR: Homepage Link für Podcast-Name
+                const podcastLinkHtml = feed && feed.homepage_url ? 
+                    `<a href="${feed.homepage_url}" target="_blank" rel="noopener noreferrer" class="podcast-name">${highlightText(podcastName, currentSearchTerm)}</a>` :
+                    `<span class="podcast-name">${highlightText(podcastName, currentSearchTerm)}</span>`;
 
                 return `
                     <tr>
-                        <td class="podcast-name" title="${podcastName}">${podcastNameLinkHtml}</td>
-                        <td class="episode-title" title="${episode.title}">${episodeTitleLinkHtml}</td>
+                        <td title="${podcastName}">${podcastLinkHtml}</td>
+                        <td>
+                            <div class="episode-title" title="${episode.title}">
+                                ${episode.url ? 
+                                    `<a href="${episode.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${highlightText(episode.title, currentSearchTerm)}</a>` :
+                                    highlightText(episode.title, currentSearchTerm)
+                                }
+                            </div>
+                        </td>
                         <td class="date">${formatDate(episode.pub_date)}</td>
-                        <td class="host" title="${host}">${highlightText(host, currentSearchTerm)}</td>
+                        <td>
+                            <span class="editable host" onclick="makeEditableHost(this, ${episodeId})" title="${episode.host || 'Klicken zum Bearbeiten'}">${highlightText(episode.host || 'Klicken zum Bearbeiten', currentSearchTerm)}</span>
+                        </td>
+                        <td class="itunes-search-cell">
+                            <button class="${itunesButtonClass}" 
+                                    data-episode-id="${episodeId}" 
+                                    title="${itunesTitle}"
+                                    onclick="searchItunes(${episodeId})"
+                                    ${itunesDisabled}>
+                                🎵
+                            </button>
+                        </td>
+                        <td class="youtube-search-cell">
+                            <button class="${youtubeButtonClass}" 
+                                    data-episode-id="${episodeId}" 
+                                    title="${youtubeTitle}"
+                                    onclick="searchYouTube(${episodeId})"
+                                    ${youtubeDisabled}>
+                                📺
+                            </button>
+                        </td>
                         <td>
                             <span class="favorite-star ${episode.is_favorite ? 'active' : 'inactive'}" 
-                                onclick="toggleFavorite(${episode.id}, this)">
-                                ${episode.is_favorite ? '⭐' : '☆'}
+                                  onclick="toggleFavorite(${episodeId})" 
+                                  title="${episode.is_favorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}">
+                                ${episode.is_favorite ? '★' : '☆'}
                             </span>
                         </td>
                     </tr>
                 `;
             }).join('');
+
+            tableBody.innerHTML = episodeRows;
         }
 
-        async function refreshAll() {
-            showStatus('Aktualisiere alle aktiven Feeds...', 'loading');
+        function highlightText(text, searchTerm) {
+            if (!searchTerm || !text) return text;
             
-            const activeFeeds = allFeeds.filter(feed => feed.is_active);
-            // Promise.allSettled verwenden, um auch bei Fehlern einzelner Feeds fortzufahren
-            // KORREKTUR: Endpoints auf `/feeds/:id/refresh_episodes` mit POST
-            const results = await Promise.allSettled(activeFeeds.map(feed => fetchData(`/feeds/${feed.id}/refresh_episodes`, 'POST'))); 
-            
-            let successCount = 0;
-            let errorCount = 0;
-            results.forEach(result => {
-                if (result.status === 'fulfilled' && result.value && result.value.message) {
-                    successCount++;
-                } else {
-                    errorCount++;
-                    console.error("Fehler beim Aktualisieren eines Feeds:", result.reason || result.value);
-                }
-            });
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
 
-            await loadDataFromBackend(); 
-            if (errorCount === 0) {
-                showStatus(`Alle ${successCount} aktiven Feeds erfolgreich aktualisiert`, 'success');
-            } else {
-                showStatus(`${successCount} Feeds aktualisiert, ${errorCount} Fehler aufgetreten.`, 'warning');
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('de-DE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        async function toggleFavorite(episodeId) {
+            const episode = allEpisodes.find(ep => getEpisodeId(ep) === episodeId);
+            if (!episode) return;
+
+            const newFavoriteStatus = !episode.is_favorite;
+            
+            // KORREKTUR: Endpoint /episodes/:id mit PUT für Favoriten-Status
+            const response = await fetchData(`/episodes/${episodeId}`, 'PUT', { is_favorite: newFavoriteStatus });
+
+            if (response) {
+                episode.is_favorite = newFavoriteStatus;
+                searchEpisodes(); // Tabelle neu rendern
+            } else { // NEU: Fehlerbehandlung
+                showStatus(`Fehler beim Aktualisieren des Favoriten-Status.`, 'danger');
             }
         }
 
-        function exportToXLSX() {
+        function makeEditableHost(element, episodeId) {
+            if (element.classList.contains('editing')) return;
+
+            const currentText = element.textContent === 'Klicken zum Bearbeiten' ? '' : element.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.className = 'w-full';
+
+            element.textContent = '';
+            element.appendChild(input);
+            element.classList.add('editing');
+            input.focus();
+            input.select();
+
+            async function saveHost() {
+                const newHost = input.value.trim();
+                element.classList.remove('editing');
+                
+                // KORREKTUR: Endpoint /episodes/:id mit PUT für Host-Update
+                const response = await fetchData(`/episodes/${episodeId}`, 'PUT', { host: newHost });
+
+                if (response) {
+                    const episode = allEpisodes.find(ep => getEpisodeId(ep) === episodeId);
+                    if (episode) {
+                        episode.host = newHost;
+                    }
+                    element.textContent = newHost || 'Klicken zum Bearbeiten';
+                    element.title = newHost || 'Klicken zum Bearbeiten';
+                } else { // NEU: Fehlerbehandlung
+                    element.textContent = currentText || 'Klicken zum Bearbeiten';
+                    showStatus(`Fehler beim Aktualisieren des Hosts.`, 'danger');
+                }
+            }
+
+            input.addEventListener('blur', saveHost);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveHost();
+                }
+            });
+        }
+
+        function makeEditableFeedTopic(element, feedId) {
+            if (element.classList.contains('editing')) return;
+
+            const currentText = element.textContent === 'Klicken zum Bearbeiten' ? '' : element.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+
+            element.textContent = '';
+            element.appendChild(input);
+            element.classList.add('editing');
+            input.focus();
+            input.select();
+
+            async function saveTopic() {
+                const newTopic = input.value.trim();
+                element.classList.remove('editing');
+                
+                // KORREKTUR: Endpoint /feeds/:id mit PUT für Topic-Update
+                const response = await fetchData(`/feeds/${feedId}`, 'PUT', { topic: newTopic });
+
+                if (response) {
+                    const feed = allFeeds.find(f => f.id === feedId);
+                    if (feed) {
+                        feed.topic = newTopic;
+                    }
+                    element.textContent = newTopic || 'Klicken zum Bearbeiten';
+                    updateFilterOptions(); // Filter-Optionen aktualisieren
+                } else { // NEU: Fehlerbehandlung
+                    element.textContent = currentText || 'Klicken zum Bearbeiten';
+                    showStatus(`Fehler beim Aktualisieren des Themas.`, 'danger');
+                }
+            }
+
+            input.addEventListener('blur', saveTopic);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveTopic();
+                }
+            });
+        }
+
+        async function exportToXLSX() {
             if (filteredEpisodes.length === 0) {
                 showStatus('Keine Episoden zum Exportieren vorhanden', 'warning');
                 return;
             }
 
-            const episodesToExport = filteredEpisodes;
-            
-            const exportData = episodesToExport.map(episode => {
-                const feed = allFeeds.find(f => f.id === episode.feed_id);
-                const podcastName = episode.podcast_name || (feed ? (feed.name || feed.url) : 'Unbekannt'); 
-                const feedTopic = feed ? feed.topic : '';
-                const host = episode.host || 'N/A'; 
+            showStatus('Exportiere Episoden...', 'loading');
 
+            const episodesToExport = filteredEpisodes.map(episode => {
+                const feed = allFeeds.find(f => f.id === episode.feed_id);
+                const podcastName = feed ? (feed.name || feed.url) : 'Unbekannt';
+                
                 return {
-                    'Podcast-Name': podcastName, 
+                    'Podcast-Name': podcastName,
                     'Episode': episode.title,
                     'Datum': formatDate(episode.pub_date),
-                    'Host': host,
-                    'Thema': feedTopic,
+                    'Host': episode.host || '',
+                    'Thema': feed ? (feed.topic || '') : '',
                     'Favorit': episode.is_favorite ? 'Ja' : 'Nein'
                 };
             });
 
+            const ws = XLSX.utils.json_to_sheet(episodesToExport);
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportData);
             
             const colWidths = [
                 { wch: 32 }, // Podcast-Name
