@@ -419,10 +419,26 @@
             align-items: center; /* Vertically align text */
         }
 
-        /* Column widths - adjust as needed for alignment */
+        /* Feed-Liste: Tabellenähnliche Struktur wie Episodenbereich */
+        .feed-list-header, .feed-item {
+            display: flex;
+            width: 100%; /* Volle Breite nutzen */
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .feed-list-header {
+            background: linear-gradient(45deg, #f7fafc, #edf2f7);
+            font-weight: 600;
+            color: #2d3748;
+            padding: 8px 0 !important;
+        }
+        
+        /* Spaltenbreiten wie Episodenbereich */
         .feed-header-col.header-checkbox,
         .feed-item .feed-checkbox-container { 
-            flex: 0 0 40px; 
+            width: 5%; /* Aktiv */
+            flex: 0 0 5%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -430,52 +446,47 @@
 
         .feed-header-col.header-podcast-name,
         .feed-podcast-name {
-            flex-basis: 234px; 
-            flex-shrink: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            cursor: help;
-            padding-right: 5px; 
-            text-align: left;
+            width: 30%; /* Podcast-Name */
+            flex: 0 0 30%;
+            padding-left: 8px;
         }
-
+        
         .feed-header-col.header-rss-url,
         .feed-url {
-            /* KORRIGIERT: flex-grow und flex-basis für bessere Verteilung */
-            flex-grow: 1; 
-            flex-shrink: 1; 
-            min-width: 150px; 
-            max-width: 400px; /* Begrenzt die maximale Breite */
-            margin-right: 10px; 
+            width: 35%; /* RSS-Adresse */
+            flex: 0 0 35%;
+            padding-left: 8px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
         
         .feed-header-col.header-topic,
-        .feed-topic { 
-            flex-basis: 100px; 
-            flex-grow: 0; 
-            flex-shrink: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            padding: 4px 8px; 
-            text-align: center; /* Text zentrieren */
+        .feed-topic {
+            width: 10%; /* Thema */
+            flex: 0 0 10%;
+            padding-left: 8px;
         }
-        
+
         .feed-header-col.header-itunes,
         .feed-header-col.header-youtube,
         .feed-availability-container {
-            flex-basis: 40px;
-            flex-grow: 0;
-            flex-shrink: 0;
+            width: 5%; /* iTunes/YouTube */
+            flex: 0 0 5%;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 4px 0 !important; /* Kein horizontales padding für bessere Zentrierung */
-            text-align: center; /* Center the icons */
+            padding: 0 !important;
+        }
+
+        .feed-header-col.header-actions,
+        .feed-item .flex.items-center.gap-2 {
+            width: 10%; /* Aktionen */
+            flex: 0 0 10%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
         }
         
         /* Zusätzliche Zentrierung für die Header-Icons */
@@ -529,13 +540,13 @@
         
         .feed-item {
             display: flex;
+            width: 100%; /* Volle Breite nutzen */
             align-items: center;
-            padding: 2px 10px !important; /* Nochmals reduziert von 3px auf 2px */
+            padding: 2px 0 !important; /* Kein horizontales padding für bessere Spaltenausrichtung */
             border-bottom: 1px solid #e5e7eb;
-            gap: 10px;
-            background: #f8fafc !important; /* Normaler Hintergrund wiederhergestellt */
-            border-radius: 6px;
-            margin-bottom: 1px !important; /* Reduziert von 1.5px auf 1px und !important hinzugefügt */
+            background: #f8fafc !important;
+            border-radius: 0; /* Kein border-radius für tabellenähnliches Layout */
+            margin-bottom: 0 !important; /* Kein margin zwischen Zeilen */
         }
 
         .feed-item:last-child {
@@ -763,7 +774,7 @@
             /* Adjustments for mobile view of feed list */
             .feed-list-header, .feed-item {
                 flex-wrap: wrap; 
-                padding: 2px 10px !important; /* Auch hier auf 2px reduziert */
+                padding: 2px 0 !important; /* Auch hier angepasst */
             }
 
             .feed-header-col, .feed-item > * {
