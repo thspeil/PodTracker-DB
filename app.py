@@ -462,6 +462,14 @@ def update_feed_availability(feed_id):
 def index():
     return render_template('podcast_tracker-DB.html', username=current_user.username)
 
+@app.route('/impressum')
+def impressum():
+    return render_template('Impressum.html')
+
+@app.route('/datenschutz')
+def datenschutz():
+    return render_template('Datenschutz.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
